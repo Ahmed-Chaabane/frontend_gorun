@@ -1,191 +1,296 @@
+import 'dart:async';
+import 'dart:math';
 import 'package:flutter/material.dart';
 
 class IntroScreen extends StatefulWidget {
+  const IntroScreen({super.key});
+
   @override
-  _IntroScreenState createState() => _IntroScreenState();
+  State<IntroScreen> createState() => _IntroScreenState();
 }
 
 class _IntroScreenState extends State<IntroScreen>
     with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<Offset> _floatingAnimation;
-
-  final List<String> quotes = [
-    "This is the perfect place to keep track of your hobbies and practice the sport you like!",
-    "Challenge yourself and discover new possibilities!",
-    "Every journey begins with a single step. Let's take it together!",
-  ];
-
-  int currentQuoteIndex = 0;
+  final String quote = "Unleash Your True Strength.";
+  late AnimationController _backgroundController;
 
   @override
   void initState() {
     super.initState();
-
-    // Animation for floating/swimming photos
-    _controller = AnimationController(
+    _backgroundController = AnimationController(
       vsync: this,
-      duration: Duration(seconds: 4),
-    )..repeat(reverse: true);
-
-    _floatingAnimation = Tween<Offset>(
-      begin: Offset(0, -0.05),
-      end: Offset(0, 0.05),
-    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
+      duration: const Duration(seconds: 120),
+    )..repeat();
   }
 
   @override
   void dispose() {
-    _controller.dispose();
+    _backgroundController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    final scaleFactor = MediaQuery.of(context).size.width / 375;
+
     return Scaffold(
-      body: Container(
-        decoration: BoxDecoration(
+      body: Stack(
+        children: [
+          // Gradient Background
+          _buildGradientBackground(),
+
+          // Ocean Light Reflection
+          AnimatedOceanLight(controller: _backgroundController),
+
+          // Floating Bubbles
+          AnimatedBackground(controller: _backgroundController),
+
+          // Content
+          _buildContent(scaleFactor),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildGradientBackground() {
+    return Positioned.fill(
+      child: Container(
+        decoration: const BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [
-              Color(0xFF4DD4DE), // Ocean top color
-              Color(0xFF162A5A), // Ocean deep color
-            ],
-          ),
-        ),
-        child: SafeArea(
-          child: Column(
-            children: [
-              // Animated Photos
-              Expanded(
-                flex: 4,
-                child: Center(
-                  child: SlideTransition(
-                    position: _floatingAnimation,
-                    child: Wrap(
-                      spacing: 8.0,
-                      runSpacing: 8.0,
-                      alignment: WrapAlignment.center,
-                      children: List.generate(8, (index) {
-                        return Container(
-                          width: 80,
-                          height: 80,
-                          decoration: BoxDecoration(
-                            image: DecorationImage(
-                              image: AssetImage(
-                                  'assets/images/photo${index + 1}.jpg'), // Replace with your photos
-                              fit: BoxFit.cover,
-                            ),
-                            borderRadius: BorderRadius.circular(12),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.2),
-                                blurRadius: 6,
-                                offset: Offset(2, 2),
-                              ),
-                            ],
-                          ),
-                        );
-                      }),
-                    ),
-                  ),
-                ),
-              ),
-
-              // Title
-              Text(
-                "FIND YOUR INNER STRENGTH",
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 24,
-                ),
-              ),
-              SizedBox(height: 16),
-
-              // Description with swipable quotes
-              Expanded(
-                flex: 2,
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 32.0),
-                      child: GestureDetector(
-                        onHorizontalDragEnd: (details) {
-                          setState(() {
-                            if (details.velocity.pixelsPerSecond.dx < 0) {
-                              // Swipe left
-                              currentQuoteIndex =
-                                  (currentQuoteIndex + 1) % quotes.length;
-                            } else if (details.velocity.pixelsPerSecond.dx >
-                                0) {
-                              // Swipe right
-                              currentQuoteIndex =
-                                  (currentQuoteIndex - 1 + quotes.length) %
-                                      quotes.length;
-                            }
-                          });
-                        },
-                        child: AnimatedSwitcher(
-                          duration: Duration(milliseconds: 500),
-                          child: Text(
-                            quotes[currentQuoteIndex],
-                            key: ValueKey(currentQuoteIndex),
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 16,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              // Join Now Button
-              ElevatedButton(
-                onPressed: () {
-                  // Handle Join Now button
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.white,
-                  padding: EdgeInsets.symmetric(horizontal: 48, vertical: 12),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(24),
-                  ),
-                ),
-                child: Text(
-                  "Join Now",
-                  style: TextStyle(
-                    color: Color(0xFF162A5A),
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-              SizedBox(height: 16),
-
-              // Log In Text Button
-              TextButton(
-                onPressed: () {
-                  // Handle Log In button
-                },
-                child: Text(
-                  "Already a member? Log in",
-                  style: TextStyle(
-                    color: Colors.white,
-                  ),
-                ),
-              ),
-              SizedBox(height: 32),
-            ],
+            colors: [Color(0xFF4DD4DE), Color(0xFF0C1A37)],
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildContent(double scaleFactor) {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.end,
+      children: [
+        Text(
+          "AWAKEN THE BEAST WITHIN",
+          style: TextStyle(
+            fontSize: 22 * scaleFactor,
+            fontWeight: FontWeight.w900,
+            color: Colors.white,
+            letterSpacing: 2,
+            shadows: [
+              Shadow(
+                offset: const Offset(0, 4),
+                blurRadius: 8,
+                color: Colors.black.withOpacity(0.7),
+              ),
+            ],
+          ),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 20),
+        Padding(
+          padding: EdgeInsets.symmetric(horizontal: 32.0 * scaleFactor),
+          child: TypewriterText(
+            text: quote,
+            textStyle: TextStyle(
+              color: Colors.white,
+              fontSize: 16 * scaleFactor,
+              fontWeight: FontWeight.bold,
+            ),
+            durationPerChar: 50, // Slightly faster typewriter effect
+          ),
+        ),
+        const SizedBox(height: 40),
+        ElevatedButton(
+          onPressed: () {
+            Navigator.of(context).pushReplacementNamed('/signup');
+          },
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.white,
+            padding: EdgeInsets.symmetric(
+              horizontal: 100 * scaleFactor,
+              vertical: 16 * scaleFactor,
+            ),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+          ),
+          child: Text(
+            "Join Now",
+            style: TextStyle(
+              color: const Color(0xFF1B85F3),
+              fontWeight: FontWeight.bold,
+              fontSize: 15 * scaleFactor,
+            ),
+          ),
+        ),
+        const SizedBox(height: 20),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Text(
+              "Already a member?",
+              style: TextStyle(color: Colors.white),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pushReplacementNamed('/login');
+              },
+              child: const Text("Log in", style: TextStyle(color: Colors.white)),
+            ),
+          ],
+        ),
+        const SizedBox(height: 40),
+      ],
+    );
+  }
+}
+
+// Typewriter Effect
+class TypewriterText extends StatefulWidget {
+  final String text;
+  final TextStyle textStyle;
+  final int durationPerChar;
+
+  const TypewriterText({
+    required this.text,
+    required this.textStyle,
+    required this.durationPerChar,
+    super.key,
+  });
+
+  @override
+  State<TypewriterText> createState() => _TypewriterTextState();
+}
+
+class _TypewriterTextState extends State<TypewriterText> {
+  String displayedText = "";
+  int currentIndex = 0;
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _timer = Timer.periodic(Duration(milliseconds: widget.durationPerChar), (timer) {
+      if (currentIndex < widget.text.length) {
+        setState(() {
+          displayedText += widget.text[currentIndex];
+          currentIndex++;
+        });
+      } else {
+        timer.cancel();
+        _timer = null; // Important: Set timer to null after completion
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel(); // Cancel the timer if the widget is disposed
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(displayedText, style: widget.textStyle, textAlign: TextAlign.center);
+  }
+}
+
+// Ocean Light Reflection
+class AnimatedOceanLight extends StatelessWidget {
+  final AnimationController controller;
+
+  const AnimatedOceanLight({required this.controller, super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: controller,
+      builder: (context, child) {
+        return CustomPaint(
+          painter: OceanLightPainter(controller.value),
+          size: Size.infinite, // Important for CustomPaint to fill the screen
+        );
+      },
+    );
+  }
+}
+
+class OceanLightPainter extends CustomPainter {
+  final double progress;
+
+  OceanLightPainter(this.progress);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..shader = LinearGradient(
+        colors: [Colors.white.withOpacity(0.3), Colors.transparent],
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+      ).createShader(Rect.fromLTWH(0, 0, size.width, size.height))
+      ..blendMode = BlendMode.lighten;
+
+    final path = Path();
+    for (double i = 0; i <= size.width; i+=2) { // Increment i for smoother wave
+      path.lineTo(i, size.height * 0.5 + sin(i * 0.005 + progress * 2 * pi) * 20); // Smaller wave, adjust as needed
+    }
+    path.lineTo(size.width, size.height);
+    path.lineTo(0, size.height);
+    path.close();
+
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(OceanLightPainter oldDelegate) => progress != oldDelegate.progress;
+}
+
+
+// Animated Background Bubbles
+class AnimatedBackground extends StatelessWidget {
+  final AnimationController controller;
+
+  const AnimatedBackground({required this.controller, super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
+    final random = Random();
+
+    return Stack(
+      children: List.generate(30, (index) {
+        final initialX = random.nextDouble() * screenWidth;
+        final size = random.nextDouble() * 40 + 10; // Smaller bubbles
+        final speed = random.nextDouble() * 0.5 + 0.5; // Varying speeds
+
+        return AnimatedBuilder(
+          animation: controller,
+          builder: (context, child) {
+            final progress = (controller.value * speed + index * 0.05) % 1.0; // Apply speed to animation
+            final top = screenHeight * (1 - progress);
+            final left = initialX + sin(progress * pi * 2) * 50 * (size/20); // Adjust horizontal movement based on size
+            final opacity = (1 - (progress - 0.5).abs() * 2).clamp(0.1, 0.5); // More subtle opacity
+
+            return Positioned(
+              left: left,
+              top: top,
+              child: Opacity(
+                opacity: opacity,
+                child: Container(
+                  width: size,
+                  height: size,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.white.withOpacity(opacity),
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      }),
     );
   }
 }

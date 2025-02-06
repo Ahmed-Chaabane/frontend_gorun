@@ -1,84 +1,75 @@
 import 'package:flutter/material.dart';
 import 'intro_screen.dart';
-import 'login_screen.dart'; // Import your login screen
 
 class SplashScreen extends StatefulWidget {
   @override
   _SplashScreenState createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _scaleAnimation;
-  late Animation<double> _opacityAnimation;
-  late Animation<Color?> _backgroundColorAnimation;
-
+class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(
-      duration: const Duration(seconds: 3), // Duration of the animation
-      vsync: this,
-    );
 
-    // Scale animation: Start small and grow bigger
-    _scaleAnimation = Tween<double>(begin: 0.1, end: 1.2).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.bounceOut), // Bounce effect
-    );
-
-    // Opacity animation: Fade out after growing
-    _opacityAnimation = Tween<double>(begin: 1.0, end: 0.0).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeOut),
-    );
-
-    // Background color transition: Change background color over time
-    _backgroundColorAnimation = ColorTween(begin: Colors.white, end: Colors.blue).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
-    );
-
-    // Start the animation
-    _controller.forward();
-
-    // After the animation completes, navigate to the login screen
-    _controller.addStatusListener((status) {
-      if (status == AnimationStatus.completed) {
-        Future.delayed(Duration(seconds: 1), () {
-          _navigateToLogin();
-        });
-      }
+    // Navigate to the IntroScreen after a 3-second delay
+    Future.delayed(Duration(seconds: 5), () {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => IntroScreen()),
+      );
     });
-  }
-
-  // Function to navigate to the login screen
-  void _navigateToLogin() {
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (context) => IntroScreen()), // Navigate to your LoginScreen
-    );
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      home: Scaffold(
-        backgroundColor: _backgroundColorAnimation.value, // Dynamically changing background color
-        body: Center(
-          child: FadeTransition(
-            opacity: _opacityAnimation,
-            child: ScaleTransition(
-              scale: _scaleAnimation,
-              child: Image(
-                image: AssetImage('assets/images/gorun_logo.png'), // Your logo image
+    return Scaffold(
+      body: Stack(
+        children: [
+          // Gradient background
+          Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Color(0xFF4DD4DE), // Vibrant blue
+                  Color(0xFF0C1A37), // Deep navy blue
+                ],
               ),
             ),
           ),
-        ),
+          // Centered content
+          Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                // Clean logo (without glow)
+                Image.asset(
+                  'assets/images/gorun_logo_white.png', // Replace with your logo asset path
+                  width: 300,
+                  height: 300,
+                ),
+                SizedBox(height: 20),
+                // Motivational tagline
+              ],
+            ),
+          ),
+          // Footer with a subtle motivational message
+          Positioned(
+            bottom: 40,
+            left: 0,
+            right: 0,
+            child: Text(
+              "FIND YOUR INNER STRENGTH",
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.white.withOpacity(0.8),
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
