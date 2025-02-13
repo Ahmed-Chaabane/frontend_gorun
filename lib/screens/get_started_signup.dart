@@ -73,7 +73,7 @@ class GetStartedSignupScreen extends StatelessWidget {
         height: 60,
         child: ElevatedButton(
           onPressed: () {
-            Navigator.of(context).pushReplacementNamed('/validation_code');
+            Navigator.of(context).pushReplacementNamed('/personalized_journey');
           },
           style: ElevatedButton.styleFrom(
             backgroundColor: const Color(0xFF162A5A),

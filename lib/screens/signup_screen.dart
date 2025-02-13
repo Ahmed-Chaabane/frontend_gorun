@@ -628,7 +628,7 @@ class _SignupScreenState extends State<SignupScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             SvgPicture.asset(
-              'assets/icons/google.svg',
+              'assets/icons/google-icon.png',
               width: 24,
               height: 24,
             ),

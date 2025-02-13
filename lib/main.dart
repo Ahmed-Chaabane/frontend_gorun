@@ -1,25 +1,39 @@
-import 'package:flutter/material.dart';
-import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:google_sign_in/google_sign_in.dart';
-import 'firebase_options.dart';
-import 'package:frontend_gorun/screens/signup_screen.dart';
-import 'package:frontend_gorun/screens/validation_code_screen.dart';
-import 'screens/splash_screen.dart';
-import 'screens/signin_screen.dart';
-import 'screens/forgot_password_screen.dart';
-import 'screens/reset_password_screen.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/material.dart';
 import 'package:frontend_gorun/screens/get_started_signin.dart';
 import 'package:frontend_gorun/screens/get_started_signup.dart';
+import 'package:frontend_gorun/screens/personalized_journey_screen.dart';
+import 'package:frontend_gorun/screens/signup_screen.dart';
+import 'package:frontend_gorun/screens/step_eight_screen.dart';
+import 'package:frontend_gorun/screens/step_five_screen.dart';
+import 'package:frontend_gorun/screens/step_four_screen.dart';
+import 'package:frontend_gorun/screens/step_one_screen.dart';
+import 'package:frontend_gorun/screens/step_seven_screen.dart';
+import 'package:frontend_gorun/screens/step_six_screen.dart';
+import 'package:frontend_gorun/screens/step_three_screen.dart';
+import 'package:frontend_gorun/screens/step_two_screen.dart';
+import 'package:frontend_gorun/screens/validation_code_screen.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+
+import 'firebase_options.dart';
+import 'screens/forgot_password_screen.dart';
+import 'screens/reset_password_screen.dart';
+import 'screens/signin_screen.dart';
+import 'screens/splash_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   try {
-    await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+    await Firebase.initializeApp(
+        options: DefaultFirebaseOptions.currentPlatform);
+
     runApp(MyApp());
   } catch (e) {
     print("Erreur lors de l'initialisation de Firebase: $e");
-    runApp(MyAppError(error: e.toString())); // Affiche un message d'erreur dans l'UI si Firebase échoue
+    runApp(MyAppError(
+        error: e
+            .toString())); // Affiche un message d'erreur dans l'UI si Firebase échoue
   }
 }
 
@@ -40,8 +54,23 @@ class MyApp extends StatelessWidget {
         '/forgot_password': (context) => ForgotPasswordScreen(),
         '/reset_password': (context) => ResetPasswordScreen(),
         '/validation_code': (context) => ValidationCodeScreen(),
-        '/get_started_signin': (context) => GetStartedSigninScreen(userName: '', userImageUrl: '',),
-        '/get_started_signup': (context) => GetStartedSignupScreen(userName: '', userImageUrl: '',),
+        '/get_started_signin': (context) => GetStartedSigninScreen(
+              userName: '',
+              userImageUrl: '',
+            ),
+        '/get_started_signup': (context) => GetStartedSignupScreen(
+              userName: '',
+              userImageUrl: '',
+            ),
+        'Personalized_Journey': (context) => PersonalizedJourney(),
+        'step_one': (context) => Step1(),
+        'step_two': (context) => Step2(),
+        'step_three': (context) => Step3(),
+        'step_four': (context) => Step4(),
+        'step_five': (context) => Step5(),
+        'step_six': (context) => Step6(),
+        'step_seven': (context) => Step7(),
+        'step_eight': (context) => Step8(),
       },
     );
   }
@@ -49,6 +78,7 @@ class MyApp extends StatelessWidget {
 
 class MyAppError extends StatelessWidget {
   final String error;
+
   MyAppError({required this.error});
 
   @override
@@ -72,14 +102,16 @@ class AuthService {
   Future<User?> signInWithGoogle() async {
     try {
       final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
-      final GoogleSignInAuthentication googleAuth = await googleUser!.authentication;
+      final GoogleSignInAuthentication googleAuth =
+          await googleUser!.authentication;
 
       final AuthCredential credential = GoogleAuthProvider.credential(
         accessToken: googleAuth.accessToken,
         idToken: googleAuth.idToken,
       );
 
-      final UserCredential userCredential = await _auth.signInWithCredential(credential);
+      final UserCredential userCredential =
+          await _auth.signInWithCredential(credential);
       return userCredential.user;
     } catch (e) {
       print('Erreur d\'authentification avec Google: $e');
