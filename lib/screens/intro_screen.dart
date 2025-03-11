@@ -9,8 +9,7 @@ class IntroScreen extends StatefulWidget {
   State<IntroScreen> createState() => _IntroScreenState();
 }
 
-class _IntroScreenState extends State<IntroScreen>
-    with SingleTickerProviderStateMixin {
+class _IntroScreenState extends State<IntroScreen> with SingleTickerProviderStateMixin {
   final String quote = "Unleash Your True Strength.";
   late AnimationController _backgroundController;
 
@@ -31,7 +30,9 @@ class _IntroScreenState extends State<IntroScreen>
 
   @override
   Widget build(BuildContext context) {
-    final scaleFactor = MediaQuery.of(context).size.width / 375;
+    // Calculate scale factor based on screen width
+    double scaleFactor = MediaQuery.of(context).size.width / 375;
+    scaleFactor = scaleFactor.clamp(1.0, 1.5); // Set min and max scaling factor (1.0 for no scaling, 1.5 for a cap on scaling)
 
     return Scaffold(
       body: Stack(
@@ -108,19 +109,19 @@ class _IntroScreenState extends State<IntroScreen>
           style: ElevatedButton.styleFrom(
             backgroundColor: Colors.white,
             padding: EdgeInsets.symmetric(
-              horizontal: 100 * scaleFactor,
-              vertical: 16 * scaleFactor,
+              horizontal: (100 * scaleFactor).clamp(40, 200), // Min: 40, Max: 200
+              vertical: (16 * scaleFactor).clamp(12, 24), // Min: 12, Max: 24
             ),
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: BorderRadius.circular(14),
             ),
           ),
           child: Text(
             "Join Now",
             style: TextStyle(
-              color: const Color(0xFF1B85F3),
+              color: const Color(0xFF0C1A37),
               fontWeight: FontWeight.bold,
-              fontSize: 15 * scaleFactor,
+              fontSize: (14 * scaleFactor).clamp(14, 20), // Min: 14, Max: 20
             ),
           ),
         ),

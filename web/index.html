@@ -14,12 +14,21 @@
     This is a placeholder for base href that will be replaced by the value of
     the `--base-href` argument provided to `flutter build`.
   -->
+  <script>
+    if (!window.AudioContext) {
+      window.AudioContext = window.webkitAudioContext;
+    }
+  </script>
   <base href="$FLUTTER_BASE_HREF">
 
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
   <meta name="description" content="A new Flutter project.">
+  <script src="https://www.gstatic.com/firebasejs/10.6.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.6.0/firebase-auth.js"></script>
   <meta name="google-signin-client_id" content="358465763062-0isj5g1km6p4nr01atoj1hagftotd1v7.apps.googleusercontent.com">
+  <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCP0LhYL-Dlz501CpynsjVwqL3pSWX8rHE"></script>
+  <meta name="flutter-web-renderer" content="html">
 
   <!-- iOS meta tags & icons -->
   <meta name="apple-mobile-web-app-capable" content="yes">

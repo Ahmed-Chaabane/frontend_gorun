@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import '../services/auth_service.dart'; // Assurez-vous que ce fichier existe
 
 class Step8 extends StatefulWidget {
   @override
@@ -79,13 +82,15 @@ class _Step8State extends State<Step8> {
     },
   ];
 
-  List<bool> isChecked = [false, false, false, false, false, false, false, false,false, false, false, false, false, false];
-  List<String> selectedSports = [];
+  List<bool> isChecked = List.filled(14, false); // Initialisation de la liste isChecked
+  List<String> objectifs_amelioration = []; // Liste pour stocker les objectifs sélectionnés
   final int totalSteps = 8;
-  int currentStep = 8; // Always fixed at Step 8
+  int currentStep = 8; // Toujours fixé à l'étape 8
 
   late PageController _pageController;
   int currentPage = 0;
+
+  final AuthService _authService = AuthService(); // Initialisation de AuthService
 
   @override
   void initState() {
@@ -120,7 +125,7 @@ class _Step8State extends State<Step8> {
     );
   }
 
-  // Top Section: Title, Progress Bar, Skip
+  // Section supérieure : Titre, Barre de progression, Bouton "Skip"
   Widget _buildTopSection() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16),
@@ -135,14 +140,14 @@ class _Step8State extends State<Step8> {
     );
   }
 
-  // Step Row with Back Button, Step Title, and Skip Button
+  // Ligne avec bouton "Back", titre de l'étape et bouton "Skip"
   Widget _buildStepRow() {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         IconButton(
-          icon: Icon(Icons.arrow_back, color: Color(0xFF808B9A), size: 24),
-          onPressed: () => Navigator.of(context).pop(),
+          icon: Icon(Icons.arrow_back, color: Color(0xFF808B9A)),
+          onPressed: () => Navigator.of(context).pushReplacementNamed('/step_seven'),
         ),
         Text(
           'Step $currentStep',
@@ -164,7 +169,7 @@ class _Step8State extends State<Step8> {
     );
   }
 
-  // Progress Bar
+  // Barre de progression
   Widget _buildProgressBar() {
     return LinearProgressIndicator(
       value: currentStep / totalSteps,
@@ -174,7 +179,7 @@ class _Step8State extends State<Step8> {
     );
   }
 
-  // Main Title
+  // Titre principal
   Widget _buildMainTitle() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24.0),
@@ -185,7 +190,7 @@ class _Step8State extends State<Step8> {
     );
   }
 
-  // Subtitle
+  // Sous-titre
   Widget _buildSubtitle() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24.0),
@@ -200,7 +205,7 @@ class _Step8State extends State<Step8> {
     );
   }
 
-  // PageView for cards
+  // PageView pour les cartes
   Widget _buildPageView() {
     return Expanded(
       child: Listener(
@@ -230,7 +235,7 @@ class _Step8State extends State<Step8> {
     );
   }
 
-  // Page Indicators
+  // Indicateurs de page
   Widget _buildPageIndicators() {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 16),
@@ -252,23 +257,33 @@ class _Step8State extends State<Step8> {
     );
   }
 
-  // Continue Button
+  // Bouton "Continue"
   Widget _buildBottomNavBar() {
     return Padding(
-      padding: const EdgeInsets.all(16.0),
+      padding: const EdgeInsets.all(40.0),
       child: ElevatedButton(
-        onPressed: () {
-          // Save selected benefits in the list
-          selectedSports = benefits
-              .where((benefit) => isChecked[benefits.indexOf(benefit)]).map((benefit) => benefit['name']!).toList();
+        onPressed: () async {
+          if (objectifs_amelioration.isNotEmpty) {
+            // Récupérer l'UID de l'utilisateur actuel
+            String firebaseUid = FirebaseAuth.instance.currentUser!.uid;
 
-          if (selectedSports.isNotEmpty) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Selected benefits: ${selectedSports.join(', ')}')),
+            // Appeler la méthode updateUserDetails de AuthService
+            String result = await _authService.updateUserDetails(
+              firebaseUid: firebaseUid,
+              objectifs_amelioration: objectifs_amelioration,
             );
+
+            // Vérifier le résultat de la mise à jour
+            if (result == 'Mise à jour réussie') {
+              Navigator.of(context).pushReplacementNamed('/home_screen');
+            } else {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(result)),
+              );
+            }
           } else {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Please select at least one benefit!')),
+              SnackBar(content: Text('Veuillez sélectionner au moins un objectif !')),
             );
           }
         },
@@ -285,10 +300,10 @@ class _Step8State extends State<Step8> {
     );
   }
 
-  // Benefit Card
+  // Carte de bénéfice
   Widget _buildBenefitCard(Map<String, String> benefit, int index) {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
+      margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 15),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(24),
@@ -306,14 +321,15 @@ class _Step8State extends State<Step8> {
               Padding(
                 padding: const EdgeInsets.all(16.0),
                 child: ClipOval(
-                  child: Image.asset(benefit['image']!, height: 180, width: 180, fit: BoxFit.cover),
+                  // Réduire la hauteur de l'image
+                  child: Image.asset(benefit['image']!, height: 150, width: 150, fit: BoxFit.cover),
                 ),
               ),
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
                 child: Text(
                   benefit['name']!,
-                  style: TextStyle(fontSize: 30, fontWeight: FontWeight.bold, color: Colors.black),
+                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.black), // Réduire la taille de police
                   textAlign: TextAlign.center,
                 ),
               ),
@@ -321,9 +337,9 @@ class _Step8State extends State<Step8> {
                 padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
                 child: Text(
                   benefit['description']!,
-                  style: TextStyle(fontSize: 16, color: Colors.grey[700]),
+                  style: TextStyle(fontSize: 14, color: Colors.grey[700]), // Réduire la taille de police
                   textAlign: TextAlign.center,
-                  maxLines: 3,
+                  maxLines: 4, // Augmenter le nombre de lignes
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
@@ -340,18 +356,20 @@ class _Step8State extends State<Step8> {
               child: Checkbox(
                 key: ValueKey(isChecked[index]),
                 value: isChecked[index],
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
                 onChanged: (bool? value) {
                   setState(() {
                     isChecked[index] = value!;
                     if (value) {
-                      selectedSports.add(benefit['name']!); // Add to selectedSports when checked
+                      objectifs_amelioration.add(benefit['name']!);
                     } else {
-                      selectedSports.remove(benefit['name']!); // Remove when unchecked
+                      objectifs_amelioration.remove(benefit['name']!);
                     }
                   });
                 },
-                activeColor: Colors.blue, // Checkbox selected color
-                checkColor: Colors.white, // Checkmark color
+                activeColor: Colors.blue,
+                checkColor: Colors.white,
+                side: BorderSide(color: Colors.grey, width: 2),
               ),
             ),
           ),

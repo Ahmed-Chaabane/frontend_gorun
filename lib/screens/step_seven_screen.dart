@@ -1,4 +1,8 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+
+import '../services/auth_service.dart';
 
 class Step7 extends StatefulWidget {
   @override
@@ -6,15 +10,30 @@ class Step7 extends StatefulWidget {
 }
 
 class _Step7State extends State<Step7> {
-  // Updated sports list with 3 elements
-  final List<Map<String, dynamic>> sports = [
-    {'name': 'Standard', 'description': 'Balanced diet, includes all food types'},
-    {'name': 'Pescetarian', 'description': 'No meat, but includes fish and seafood'},
-    {'name': 'Vegetarian', 'description': 'No meat, no animal products'},
-    {'name': 'Vegan', 'description': 'No animal products of any kind'},
+  final List<Map<String, dynamic>> dietOptions = [
+    {
+      'name': 'Standard',
+      'icon': Icons.fastfood,
+      'description': 'A balanced diet that includes all food groups.',
+    },
+    {
+      'name': 'Pescetarian',
+      'icon': FontAwesomeIcons.fish,
+      'description': 'No meat, but includes fish and seafood.',
+    },
+    {
+      'name': 'Vegetarian',
+      'icon': Icons.egg,
+      'description': 'No meat, but includes dairy and eggs.',
+    },
+    {
+      'name': 'Vegan',
+      'icon': FontAwesomeIcons.carrot,
+      'description': 'No animal products of any kind.',
+    },
   ];
-
-  List<String> selectedSports = [];
+  final AuthService _authService = AuthService();
+  String? regime_alimentaire; // Changed to store a single selected diet
   final int totalSteps = 8;
   int currentStep = 7;
 
@@ -35,10 +54,10 @@ class _Step7State extends State<Step7> {
             const SizedBox(height: 8),
             _buildSubtitle(),
             const SizedBox(height: 24),
-            for (int i = 0; i < sports.length; i++)
-              _buildSportCard(sports[i], i),
+            for (int i = 0; i < dietOptions.length; i++)
+              _buildDietCard(dietOptions[i], i),
             const SizedBox(height: 24),
-            _buildActionButton(context), // Now scrolls with content
+            _buildActionButton(context),
           ],
         ),
       ),
@@ -55,15 +74,13 @@ class _Step7State extends State<Step7> {
   }
 
   Widget _buildTopSection() {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 16),
+    return Padding(
+      padding: const EdgeInsets.all(20.0),
       child: Row(
         children: [
           IconButton(
-            icon: Icon(Icons.arrow_back, color: Color(0xFF808B9A), size: 24),
-            onPressed: () {
-              Navigator.of(context).pop();
-            },
+            icon: const Icon(Icons.arrow_back, color: Color(0xFF808B9A), size: 24),
+            onPressed: () => Navigator.pushNamed(context, '/step_six'),
           ),
           const SizedBox(width: 8),
           Text(
@@ -83,7 +100,9 @@ class _Step7State extends State<Step7> {
 
   Widget _buildSkipButton() {
     return TextButton(
-      onPressed: () {},
+      onPressed: () {
+        Navigator.of(context).pushReplacementNamed('/step_eight');
+      },
       child: Text(
         'Skip question',
         style: TextStyle(
@@ -96,7 +115,7 @@ class _Step7State extends State<Step7> {
 
   Widget _buildTitleSection() {
     return Text(
-      'What’s your diet type?',
+      'What is your preferred diet?',
       style: TextStyle(
         color: const Color(0xFF39434F),
         fontSize: 36,
@@ -107,7 +126,7 @@ class _Step7State extends State<Step7> {
 
   Widget _buildSubtitle() {
     return Text(
-      'Select all that apply:',
+      'Select one option:',
       style: TextStyle(
         color: const Color(0xFF808B9A),
         fontSize: 16,
@@ -116,34 +135,31 @@ class _Step7State extends State<Step7> {
     );
   }
 
-  Widget _buildSportCard(Map<String, dynamic> sportData, int index) {
-    final String sport = sportData['name'];
-    final String description = sportData['description'];
-
-    bool isSelected = selectedSports.contains(sport);
+  Widget _buildDietCard(Map<String, dynamic> dietData, int index) {
+    final String dietName = dietData['name'];
+    final IconData icon = dietData['icon'];
+    final String description = dietData['description'];
+    bool isSelected = regime_alimentaire == dietName; // Check if this diet is selected
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
       child: GestureDetector(
         onTap: () {
           setState(() {
-            if (isSelected) {
-              selectedSports.remove(sport); // Deselect if already selected
-            } else {
-              selectedSports.add(sport); // Select if not selected
-            }
+            // Select this diet and deselect others
+            regime_alimentaire = isSelected ? null : dietName;
           });
         },
         child: Container(
           width: double.infinity,
-          height: 110,
+          height: 130,
           decoration: ShapeDecoration(
             color: isSelected ? Color(0xFFF5BA41) : Colors.white,
             shape: RoundedRectangleBorder(
               side: BorderSide(
-                width: 1,
+                width: 2,
                 strokeAlign: BorderSide.strokeAlignCenter,
-                color: const Color(0xFFF7FAFC),
+                color: const Color(0xFFF1F1F1),
               ),
               borderRadius: BorderRadius.circular(14),
             ),
@@ -167,31 +183,30 @@ class _Step7State extends State<Step7> {
               Expanded(
                 flex: 2,
                 child: Padding(
-                  padding:
-                  const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        sport,
+                        dietName,
                         style: TextStyle(
-                          color: isSelected ? Colors.white : Color(0xFF39434F),
+                          color: isSelected ? Colors.white : Color(0xFF808B9A),
                           fontSize: 16,
                           fontFamily: 'Plus Jakarta Sans',
                           fontWeight: FontWeight.w600,
                           height: 1.50,
                         ),
                       ),
-                      const SizedBox(height: 10),
-                      Text(
-                        description,
-                        style: TextStyle(
-                          color: isSelected ? Colors.white : Color(0xFF808B9A),
-                          fontSize: 13,
-                          fontFamily: 'Plus Jakarta Sans',
-                          fontWeight: FontWeight.w500,
-                          height: 1.38,
+                      // Description est toujours affichée, peu importe la sélection
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8.0),
+                        child: Text(
+                          description,
+                          style: TextStyle(
+                            color: isSelected ? Colors.white70 : Color(0xFF808B9A),
+                            fontSize: 14,
+                          ),
                         ),
                       ),
                     ],
@@ -200,23 +215,23 @@ class _Step7State extends State<Step7> {
               ),
               Expanded(
                 flex: 1,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 8),
-                  child: Align(
-                    alignment: Alignment.centerRight,
-                    child: Radio<String>(
-                      value: sport,
-                      groupValue: isSelected ? sport : null,
-                      onChanged: (String? value) {
-                        setState(() {
-                          if (value == sport) {
-                            selectedSports.add(sport);
-                          } else {
-                            selectedSports.remove(sport);
-                          }
-                        });
-                      },
-                      activeColor: Colors.white, // Change the color of the selected radio button to white
+                child: Center(
+                  child: isSelected
+                      ? Icon(
+                    icon,
+                    size: 70,
+                    color: Colors.white,
+                  )
+                      : CustomPaint(
+                    size: Size(70, 70),
+                    painter: GradientIconPainter(
+                      icon: icon,
+                      size: 70,
+                      gradient: LinearGradient(
+                        colors: [Color(0xFF4DD4DE), Color(0xFF0C1A37)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
                     ),
                   ),
                 ),
@@ -229,15 +244,34 @@ class _Step7State extends State<Step7> {
   }
 
   Widget _buildActionButton(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 90.0),
+    return Container(
+      color: Colors.white,
+      padding: const EdgeInsets.all(20.0),
       child: ElevatedButton(
-        onPressed: () {
-          if (selectedSports.isNotEmpty) {
-            Navigator.of(context).pushReplacementNamed('/step_eight');
+        onPressed: () async {
+          if (regime_alimentaire != null) {
+            String firebaseUid = FirebaseAuth.instance.currentUser!.uid;
+
+            // Afficher la valeur pour déboguer
+            print('Fréquence d\'entraînement sélectionnée : $regime_alimentaire');
+
+            // Appel de la méthode pour mettre à jour avec regime_alimentaire
+            String result = await _authService.updateUserDetails(
+              firebaseUid: firebaseUid,
+              regime_alimentaire: regime_alimentaire, // Envoyer la valeur unique
+            );
+
+            // Vérifier le résultat de la mise à jour
+            if (result == 'Mise à jour réussie') {
+              Navigator.of(context).pushReplacementNamed('/step_eight'); // Corrected navigation
+            } else {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(result)),
+              );
+            }
           } else {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Please select at least one diet type!')),
+              SnackBar(content: Text('Veuillez sélectionner une option !')),
             );
           }
         },
@@ -254,5 +288,47 @@ class _Step7State extends State<Step7> {
         ),
       ),
     );
+  }
+}
+
+class GradientIconPainter extends CustomPainter {
+  final IconData icon;
+  final double size;
+  final Gradient gradient;
+
+  GradientIconPainter({
+    required this.icon,
+    required this.size,
+    required this.gradient,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final Rect rect = Rect.fromLTWH(0, 0, this.size, this.size);
+    final Paint paint = Paint()..shader = gradient.createShader(rect);
+
+    final TextSpan span = TextSpan(
+      text: String.fromCharCode(icon.codePoint),
+      style: TextStyle(
+        fontSize: this.size,
+        fontFamily: icon.fontFamily,
+        package: icon.fontPackage,
+        foreground: paint,
+      ),
+    );
+
+    final TextPainter textPainter = TextPainter(
+      text: span,
+      textAlign: TextAlign.center,
+      textDirection: TextDirection.ltr,
+    );
+
+    textPainter.layout(minWidth: this.size, maxWidth: this.size);
+    textPainter.paint(canvas, Offset(0, 0));
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) {
+    return false;
   }
 }

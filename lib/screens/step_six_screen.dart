@@ -1,4 +1,7 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import '../services/auth_service.dart';
 
 class Step6 extends StatefulWidget {
   @override
@@ -6,12 +9,17 @@ class Step6 extends StatefulWidget {
 }
 
 class _Step6State extends State<Step6> {
-  final List<Map<String, dynamic>> sports = [
-    {'name': 'No, I don’t have'},
-    {'name': 'Yes, I have'},
+  final List<Map<String, dynamic>> healthConditionsOptions = [
+    {'name': 'No, I don’t have', 'icon': Icons.health_and_safety},
+    {'name': 'Cardiac issues', 'icon': FontAwesomeIcons.heart},
+    {'name': 'Respiratory problems', 'icon': FontAwesomeIcons.lungs},
+    {'name': 'Joint pain', 'icon': FontAwesomeIcons.bone},
+    {'name': 'Diabetes', 'icon': FontAwesomeIcons.vial},
+    {'name': 'Other', 'icon': Icons.medical_services},
   ];
 
-  List<String> selectedSports = [];
+  final AuthService _authService = AuthService();
+  List<String> health_conditions = [];
   final int totalSteps = 8;
   int currentStep = 6;
   final TextEditingController _conditionController = TextEditingController();
@@ -33,7 +41,8 @@ class _Step6State extends State<Step6> {
             const SizedBox(height: 8),
             _buildSubtitle(),
             const SizedBox(height: 24),
-            ...sports.map((sportData) => _buildSportCard(sportData)),
+            for (int i = 0; i < healthConditionsOptions.length; i++)
+              _buildSportCard(healthConditionsOptions[i], i),
             const SizedBox(height: 24),
             _buildLargeTextField(),
             const SizedBox(height: 24),
@@ -55,12 +64,12 @@ class _Step6State extends State<Step6> {
 
   Widget _buildTopSection() {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 16),
+      padding: const EdgeInsets.all(20.0),
       child: Row(
         children: [
           IconButton(
             icon: const Icon(Icons.arrow_back, color: Color(0xFF808B9A), size: 24),
-            onPressed: () => Navigator.of(context).pop(),
+            onPressed: () => Navigator.pushNamed(context, '/step_five'),
           ),
           const SizedBox(width: 8),
           Text(
@@ -80,7 +89,9 @@ class _Step6State extends State<Step6> {
 
   Widget _buildSkipButton() {
     return TextButton(
-      onPressed: () {},
+      onPressed: () {
+        Navigator.of(context).pushReplacementNamed('/step_seven');
+      },
       child: Text(
         'Skip question',
         style: TextStyle(
@@ -93,7 +104,7 @@ class _Step6State extends State<Step6> {
 
   Widget _buildTitleSection() {
     return Text(
-      'Do you have any health problems that can affect your trainings?',
+      'Do you have any health problems that can affect your training?',
       style: TextStyle(
         color: const Color(0xFF39434F),
         fontSize: 36,
@@ -104,7 +115,7 @@ class _Step6State extends State<Step6> {
 
   Widget _buildSubtitle() {
     return Text(
-      'Select all that apply:',
+      'Select one or more options:',
       style: TextStyle(
         color: const Color(0xFF808B9A),
         fontSize: 16,
@@ -113,19 +124,32 @@ class _Step6State extends State<Step6> {
     );
   }
 
-  Widget _buildSportCard(Map<String, dynamic> sportData) {
-    final String sport = sportData['name'];
-    bool isSelected = selectedSports.contains(sport);
+  Widget _buildSportCard(Map<String, dynamic> conditionData, int index) {
+    final String condition = conditionData['name'];
+    final IconData icon = conditionData['icon'];
+    bool isSelected = health_conditions.contains(condition); // Check if condition is selected
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
       child: GestureDetector(
         onTap: () {
           setState(() {
-            if (isSelected) {
-              selectedSports.remove(sport);
+            // Handle selection/deselection
+            if (condition == 'No, I don’t have') {
+              // If 'No, I don’t have' is selected, deselect all other options
+              if (isSelected) {
+                health_conditions.clear(); // Deselect all
+              } else {
+                health_conditions = [condition]; // Select only 'No, I don’t have'
+              }
             } else {
-              selectedSports.add(sport);
+              // If any other condition is selected, ensure 'No, I don’t have' is deselected
+              if (isSelected) {
+                health_conditions.remove(condition); // Remove condition if already selected
+              } else {
+                health_conditions.add(condition); // Add condition to list
+                health_conditions.remove('No, I don’t have'); // Remove 'No, I don’t have' if any other condition is selected
+              }
             }
           });
         },
@@ -136,9 +160,9 @@ class _Step6State extends State<Step6> {
             color: isSelected ? Color(0xFFF5BA41) : Colors.white,
             shape: RoundedRectangleBorder(
               side: BorderSide(
-                width: 1,
+                width: 2,
                 strokeAlign: BorderSide.strokeAlignCenter,
-                color: const Color(0xFFF7FAFC),
+                color: const Color(0xFFF1F1F1),
               ),
               borderRadius: BorderRadius.circular(14),
             ),
@@ -157,15 +181,54 @@ class _Step6State extends State<Step6> {
               ),
             ],
           ),
-          child: Center(
-            child: Text(
-              sport,
-              style: TextStyle(
-                color: isSelected ? Colors.white : Color(0xFF808B9A),
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
+          child: Row(
+            children: [
+              Expanded(
+                flex: 2,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        condition,
+                        style: TextStyle(
+                          color: isSelected ? Colors.white : Color(0xFF808B9A),
+                          fontSize: 16,
+                          fontFamily: 'Plus Jakarta Sans',
+                          fontWeight: FontWeight.w600,
+                          height: 1.50,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
-            ),
+              Expanded(
+                flex: 1,
+                child: Center(
+                  child: isSelected
+                      ? Icon(
+                    icon,
+                    size: 70,
+                    color: Colors.white,
+                  )
+                      : CustomPaint( // Gradient icon
+                    size: Size(70, 70),
+                    painter: GradientIconPainter(
+                      icon: icon,
+                      size: 70,
+                      gradient: LinearGradient(
+                        colors: [Color(0xFF4DD4DE), Color(0xFF0C1A37)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ),
@@ -189,32 +252,32 @@ class _Step6State extends State<Step6> {
           const SizedBox(height: 8),
           TextField(
             controller: _conditionController,
-            maxLines: 5,  // Make the text field larger for multi-line input
+            maxLines: 5,  // Make the text field larger for multiline input
             decoration: InputDecoration(
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
                 borderSide: BorderSide(
-                  color: Color(0xFFB0B0B0),  // Set the border color here
+                  color: Color(0xFFB0B0B0),  // Border color
                   width: 1.5,
                 ),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
                 borderSide: BorderSide(
-                  color: Color(0xFF6B6B6B),  // Dark gray color for focused border
+                  color: Color(0xFF6B6B6B),  // Focused border color
                   width: 2.0,
                 ),
               ),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
                 borderSide: BorderSide(
-                  color: Color(0xFFB0B0B0),  // Gray border when not focused
+                  color: Color(0xFFB0B0B0),  // Enabled border color
                   width: 1.5,
                 ),
               ),
               hintText: 'Suggested',
               hintStyle: TextStyle(
-                color: Color(0xFFB0B0B0),  // Set your desired hint text color
+                color: Color(0xFFB0B0B0),
                 fontSize: 16,
               ),
             ),
@@ -224,17 +287,33 @@ class _Step6State extends State<Step6> {
     );
   }
 
-
   Widget _buildActionButton(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 60.0),
+      padding: const EdgeInsets.all(20.0),
       child: ElevatedButton(
-        onPressed: () {
-          if (selectedSports.isNotEmpty) {
-            Navigator.of(context).pushReplacementNamed('/step_seven');
+        onPressed: () async {
+          if (health_conditions.isNotEmpty) { // Ensure at least one condition is selected
+            String firebaseUid = FirebaseAuth.instance.currentUser!.uid;
+
+            // Debug: print selected conditions
+            print('Selected health conditions: $health_conditions');
+
+            // Call update method with selected conditions
+            String result = await _authService.updateUserDetails(
+              firebaseUid: firebaseUid,
+              health_conditions: health_conditions, // Send the list of selected conditions
+            );
+
+            if (result == 'Mise à jour réussie') {
+              Navigator.of(context).pushReplacementNamed('/step_seven');
+            } else {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(result)),
+              );
+            }
           } else {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Please select at least one sport!')),
+              SnackBar(content: Text('Please select at least one health condition!')),
             );
           }
         },
@@ -251,5 +330,47 @@ class _Step6State extends State<Step6> {
         ),
       ),
     );
+  }
+}
+
+class GradientIconPainter extends CustomPainter {
+  final IconData icon;
+  final double size;
+  final Gradient gradient;
+
+  GradientIconPainter({
+    required this.icon,
+    required this.size,
+    required this.gradient,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final Rect rect = Rect.fromLTWH(0, 0, this.size, this.size);
+    final Paint paint = Paint()..shader = gradient.createShader(rect);
+
+    final TextSpan span = TextSpan(
+      text: String.fromCharCode(icon.codePoint),
+      style: TextStyle(
+        fontSize: this.size,
+        fontFamily: icon.fontFamily,
+        package: icon.fontPackage,
+        foreground: paint,
+      ),
+    );
+
+    final TextPainter textPainter = TextPainter(
+      text: span,
+      textAlign: TextAlign.center,
+      textDirection: TextDirection.ltr,
+    );
+
+    textPainter.layout(minWidth: this.size, maxWidth: this.size);
+    textPainter.paint(canvas, Offset.zero);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) {
+    return true;
   }
 }

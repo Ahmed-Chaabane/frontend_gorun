@@ -1,10 +1,23 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'package:frontend_gorun/screens/Community_Challenge_Screen.dart';
+import 'package:frontend_gorun/screens/Goals_Screen.dart';
+import 'package:frontend_gorun/screens/Hydration_Screen.dart';
+import 'package:frontend_gorun/screens/Recuperation_Blessure_Screen.dart';
+import 'package:frontend_gorun/screens/audioPlayerModel.dart';
+import 'package:frontend_gorun/screens/basketball_screen.dart';
+import 'package:frontend_gorun/screens/cycling_screen.dart';
+import 'package:frontend_gorun/screens/football_screen.dart';
 import 'package:frontend_gorun/screens/get_started_signin.dart';
 import 'package:frontend_gorun/screens/get_started_signup.dart';
+import 'package:frontend_gorun/screens/hiking_screen.dart';
+import 'package:frontend_gorun/screens/home_screen.dart';
+import 'package:frontend_gorun/screens/music_screen.dart';
 import 'package:frontend_gorun/screens/personalized_journey_screen.dart';
+import 'package:frontend_gorun/screens/running_screen.dart';
 import 'package:frontend_gorun/screens/signup_screen.dart';
+import 'package:frontend_gorun/screens/sleep_screen.dart';
+import 'package:frontend_gorun/screens/splash_screen.dart';
 import 'package:frontend_gorun/screens/step_eight_screen.dart';
 import 'package:frontend_gorun/screens/step_five_screen.dart';
 import 'package:frontend_gorun/screens/step_four_screen.dart';
@@ -13,27 +26,40 @@ import 'package:frontend_gorun/screens/step_seven_screen.dart';
 import 'package:frontend_gorun/screens/step_six_screen.dart';
 import 'package:frontend_gorun/screens/step_three_screen.dart';
 import 'package:frontend_gorun/screens/step_two_screen.dart';
+import 'package:frontend_gorun/screens/swimming_screen.dart';
+import 'package:frontend_gorun/screens/tennis_screen.dart';
 import 'package:frontend_gorun/screens/validation_code_screen.dart';
-import 'package:google_sign_in/google_sign_in.dart';
+import 'package:frontend_gorun/screens/volleyball_screen.dart';
+import 'package:frontend_gorun/screens/weight_screen.dart';
+import 'package:frontend_gorun/screens/yoga_screen.dart';
+import 'package:provider/provider.dart';
 
 import 'firebase_options.dart';
 import 'screens/forgot_password_screen.dart';
 import 'screens/reset_password_screen.dart';
 import 'screens/signin_screen.dart';
-import 'screens/splash_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
   try {
+    // Initialisation de Firebase
     await Firebase.initializeApp(
         options: DefaultFirebaseOptions.currentPlatform);
 
-    runApp(MyApp());
+    runApp(
+      MultiProvider(
+        providers: [
+          // Fournisseur pour gérer l'état du lecteur audio
+          ChangeNotifierProvider(create: (_) => AudioPlayerModel()),
+        ],
+        child: MyApp(),
+      ),
+    );
   } catch (e) {
     print("Erreur lors de l'initialisation de Firebase: $e");
-    runApp(MyAppError(
-        error: e
-            .toString())); // Affiche un message d'erreur dans l'UI si Firebase échoue
+    // Afficher un message d'erreur dans l'UI si Firebase échoue
+    runApp(MyAppError(error: e.toString()));
   }
 }
 
@@ -62,15 +88,31 @@ class MyApp extends StatelessWidget {
               userName: '',
               userImageUrl: '',
             ),
-        'Personalized_Journey': (context) => PersonalizedJourney(),
-        'step_one': (context) => Step1(),
-        'step_two': (context) => Step2(),
-        'step_three': (context) => Step3(),
-        'step_four': (context) => Step4(),
-        'step_five': (context) => Step5(),
-        'step_six': (context) => Step6(),
-        'step_seven': (context) => Step7(),
-        'step_eight': (context) => Step8(),
+        '/personalized_journey': (context) => PersonalizedJourney(),
+        '/step_one': (context) => Step1(),
+        '/step_two': (context) => Step2(),
+        '/step_three': (context) => Step3(),
+        '/step_four': (context) => Step4(),
+        '/step_five': (context) => Step5(),
+        '/step_six': (context) => Step6(),
+        '/step_seven': (context) => Step7(),
+        '/step_eight': (context) => Step8(),
+        '/home_screen': (context) => HomeScreen(),
+        '/music_screen': (context) => MusicScreen(),
+        '/yoga_screen': (context) => YogaTracker(),
+        '/weight_screen': (context) => WeightTrainingTracker(),
+        '/volleyball_screen': (context) => VolleyballTracker(),
+        '/tennis_screen': (context) => TennisTracker(),
+        '/swimming_screen': (context) => SwimmingTracker(),
+        '/running_screen': (context) => RunningTracker(),
+        '/hiking_screen': (context) => HikingTracker(),
+        '/football_screen': (context) => FootballTracker(),
+        '/basketball_screen': (context) => BasketballTracker(),
+        '/cycling_screen': (context) => CyclingTracker(),
+        '/objectif_screen': (context) => DefineGoalScreen(),
+        '/community_challenge_screen': (context) => CommunityChallengeScreen(),
+        '/SleepGoalScreen': (context) => SleepGoalScreen(),
+        '/hydration_screen': (context) => HydrationScreen(),
       },
     );
   }
@@ -88,73 +130,6 @@ class MyAppError extends StatelessWidget {
         appBar: AppBar(title: Text("Erreur d'initialisation")),
         body: Center(
           child: Text('Erreur lors de l\'initialisation de Firebase: $error'),
-        ),
-      ),
-    );
-  }
-}
-
-class AuthService {
-  final FirebaseAuth _auth = FirebaseAuth.instance;
-  final GoogleSignIn _googleSignIn = GoogleSignIn();
-
-  // Authentification avec Google
-  Future<User?> signInWithGoogle() async {
-    try {
-      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
-      final GoogleSignInAuthentication googleAuth =
-          await googleUser!.authentication;
-
-      final AuthCredential credential = GoogleAuthProvider.credential(
-        accessToken: googleAuth.accessToken,
-        idToken: googleAuth.idToken,
-      );
-
-      final UserCredential userCredential =
-          await _auth.signInWithCredential(credential);
-      return userCredential.user;
-    } catch (e) {
-      print('Erreur d\'authentification avec Google: $e');
-      return null;
-    }
-  }
-
-  // Se déconnecter
-  Future<void> signOut() async {
-    await _auth.signOut();
-    await _googleSignIn.signOut();
-  }
-
-  // Vérifier si l'utilisateur est connecté
-  Stream<User?> get user => _auth.authStateChanges();
-}
-
-class HomeScreen extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text('Welcome Home')),
-      body: Center(child: Text('You are logged in!')),
-    );
-  }
-}
-
-class SignInScreen extends StatelessWidget {
-  final AuthService authService = AuthService();
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text('Sign In')),
-      body: Center(
-        child: ElevatedButton(
-          onPressed: () async {
-            User? user = await authService.signInWithGoogle();
-            if (user != null) {
-              Navigator.pushReplacementNamed(context, '/home');
-            }
-          },
-          child: Text('Sign in with Google'),
         ),
       ),
     );

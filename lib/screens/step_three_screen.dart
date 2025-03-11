@@ -1,4 +1,7 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+
+import '../services/auth_service.dart';
 
 class Step3 extends StatefulWidget {
   @override
@@ -12,8 +15,8 @@ class _Step3State extends State<Step3> {
     {'name': 'Yoga'},
     {'name': 'Low Impact Exercise'},
   ];
-
-  List<String> selectedSports = [];
+  final AuthService _authService = AuthService();
+  List<String> preferences_sportives = [];
   final int totalSteps = 8;
   int currentStep = 3;
 
@@ -61,7 +64,7 @@ class _Step3State extends State<Step3> {
           IconButton(
             icon: Icon(Icons.arrow_back, color: Color(0xFF808B9A), size: 24),
             onPressed: () {
-              Navigator.of(context).pop();
+              Navigator.of(context).pushReplacementNamed('/step_two');
             },
           ),
           const SizedBox(width: 8),
@@ -82,7 +85,9 @@ class _Step3State extends State<Step3> {
 
   Widget _buildSkipButton() {
     return TextButton(
-      onPressed: () {},
+      onPressed: () {
+        Navigator.of(context).pushReplacementNamed('/step_four');
+      },
       child: Text(
         'Skip question',
         style: TextStyle(
@@ -117,7 +122,6 @@ class _Step3State extends State<Step3> {
 
   Widget _buildSportCard(Map<String, dynamic> sportData, int index) {
     final String sport = sportData['name'];
-
     // Mapping sport names to their respective icons
     final Map<String, IconData> sportIcons = {
       'Strength Training': Icons.fitness_center,
@@ -126,7 +130,7 @@ class _Step3State extends State<Step3> {
       'Low Impact Exercise': Icons.accessibility_new,
     };
 
-    bool isSelected = selectedSports.contains(sport);
+    bool isSelected = preferences_sportives.contains(sport);
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
@@ -134,9 +138,9 @@ class _Step3State extends State<Step3> {
         onTap: () {
           setState(() {
             if (isSelected) {
-              selectedSports.remove(sport); // Deselect if already selected
+              preferences_sportives.remove(sport); // Deselect if already selected
             } else {
-              selectedSports.add(sport); // Select if not selected
+              preferences_sportives.add(sport); // Select if not selected
             }
           });
         },
@@ -147,9 +151,9 @@ class _Step3State extends State<Step3> {
             color: isSelected ? Color(0xFFF5BA41) : Colors.white,
             shape: RoundedRectangleBorder(
               side: BorderSide(
-                width: 1,
+                width: 2,
                 strokeAlign: BorderSide.strokeAlignCenter,
-                color: const Color(0xFFF7FAFC),
+                color: const Color(0xFFF1F1F1),
               ),
               borderRadius: BorderRadius.circular(14),
             ),
@@ -194,14 +198,26 @@ class _Step3State extends State<Step3> {
               ),
               Expanded(
                 flex: 1,
-                child: Container(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.horizontal(right: Radius.circular(14)),
-                  ),
-                  child: Icon(
-                    sportIcons[sport], // Display the corresponding icon
-                    size: 40,
-                    color: isSelected ? Colors.white : Color(0xFF808B9A),
+                child: Center(
+                  child: isSelected
+                      ? Icon(
+                    sportIcons[sport], // Icône blanche lorsqu'elle est sélectionnée
+                    size: 70,
+                    color: Colors.white,
+                  )
+                      : ShaderMask(
+                    shaderCallback: (Rect bounds) {
+                      return LinearGradient(
+                        colors: [Color(0xFF4DD4DE), Color(0xFF0C1A37)], // Dégradé personnalisé
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ).createShader(bounds);
+                    },
+                    child: Icon(
+                      sportIcons[sport], // Icône avec dégradé lorsqu'elle n'est pas sélectionnée
+                      size: 70,
+                      color: Colors.white, // Couleur de base pour le dégradé
+                    ),
                   ),
                 ),
               ),
@@ -212,16 +228,27 @@ class _Step3State extends State<Step3> {
     );
   }
 
+  // Bouton "Continue"
   Widget _buildActionButton(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 16.0),
+    return Container(
+      color: Colors.white,
+      padding: const EdgeInsets.all(20.0),
       child: ElevatedButton(
-        onPressed: () {
-          if (selectedSports.isNotEmpty) {
+        onPressed: () async {
+          String firebaseUid = FirebaseAuth.instance.currentUser!.uid; // Récupérer l'UID de l'utilisateur connecté
+
+          // Appel de la méthode pour mettre à jour avec uniquement selectedSports
+          String result = await _authService.updateUserDetails(
+            firebaseUid: firebaseUid,
+            preferences_sportives: preferences_sportives, // Passer la liste des sports sélectionnés
+          );
+
+          // Vérifier le résultat de la mise à jour
+          if (result == 'Mise à jour réussie') {
             Navigator.of(context).pushReplacementNamed('/step_four');
           } else {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Please select at least one sport!')),
+              SnackBar(content: Text(result)),
             );
           }
         },

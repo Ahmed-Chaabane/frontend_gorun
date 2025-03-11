@@ -29,6 +29,11 @@
 	<key>UIMainStoryboardFile</key>
 	<string>Main</string>
 	<key>UISupportedInterfaceOrientations</key>
+	<key>NSHealthShareUsageDescription</key>
+    <string>This app needs access to Health data.</string>
+    <key>NSHealthUpdateUsageDescription</key>
+    <string>This app needs access to update your Health data.</string>
+
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
 		<string>UIInterfaceOrientationLandscapeLeft</string>

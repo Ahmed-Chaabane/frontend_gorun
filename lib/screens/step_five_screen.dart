@@ -1,4 +1,8 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+
+import '../services/auth_service.dart';
 
 class Step5 extends StatefulWidget {
   @override
@@ -13,7 +17,16 @@ class _Step5State extends State<Step5> {
     {'name': 'more than 3 times per week'},
   ];
 
-  List<String> selectedSports = [];
+  // Mapping sport names to their respective icons
+  final Map<String, IconData> frequencyIcons = {
+    '1 time per week': Icons.access_time, // Horloge pour indiquer une faible fréquence
+    '2 times per week': FontAwesomeIcons.calendarWeek, // Calendrier pour une routine
+    '3 times per week': FontAwesomeIcons.running, // Course pour plus d'engagement
+    'more than 3 times per week': Icons.local_fire_department, // Flamme pour intensité et motivation
+  };
+
+  final AuthService _authService = AuthService();
+  String? frequence_entrainement; // Utiliser un String? pour stocker une seule valeur
   final int totalSteps = 8;
   int currentStep = 5;
 
@@ -55,13 +68,13 @@ class _Step5State extends State<Step5> {
 
   Widget _buildTopSection() {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 16),
+      padding: const EdgeInsets.all(20.0),
       child: Row(
         children: [
           IconButton(
             icon: Icon(Icons.arrow_back, color: Color(0xFF808B9A), size: 24),
             onPressed: () {
-              Navigator.of(context).pop();
+              Navigator.of(context).pushReplacementNamed('/step_four');
             },
           ),
           const SizedBox(width: 8),
@@ -82,7 +95,9 @@ class _Step5State extends State<Step5> {
 
   Widget _buildSkipButton() {
     return TextButton(
-      onPressed: () {},
+      onPressed: () {
+        Navigator.of(context).pushReplacementNamed('/step_six');
+      },
       child: Text(
         'Skip question',
         style: TextStyle(
@@ -106,7 +121,7 @@ class _Step5State extends State<Step5> {
 
   Widget _buildSubtitle() {
     return Text(
-      'Select all that apply:',
+      'Select one option:',
       style: TextStyle(
         color: const Color(0xFF808B9A),
         fontSize: 16,
@@ -117,8 +132,7 @@ class _Step5State extends State<Step5> {
 
   Widget _buildSportCard(Map<String, dynamic> sportData, int index) {
     final String sport = sportData['name'];
-
-    bool isSelected = selectedSports.contains(sport);
+    bool isSelected = frequence_entrainement == sport; // Vérifier si cette option est sélectionnée
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
@@ -126,9 +140,9 @@ class _Step5State extends State<Step5> {
         onTap: () {
           setState(() {
             if (isSelected) {
-              selectedSports.remove(sport); // Deselect if already selected
+              frequence_entrainement = null; // Désélectionner si déjà sélectionné
             } else {
-              selectedSports.add(sport); // Select if not selected
+              frequence_entrainement = sport; // Sélectionner cette option
             }
           });
         },
@@ -139,9 +153,9 @@ class _Step5State extends State<Step5> {
             color: isSelected ? Color(0xFFF5BA41) : Colors.white,
             shape: RoundedRectangleBorder(
               side: BorderSide(
-                width: 1,
+                width: 2,
                 strokeAlign: BorderSide.strokeAlignCenter,
-                color: const Color(0xFFF7FAFC),
+                color: const Color(0xFFF1F1F1),
               ),
               borderRadius: BorderRadius.circular(14),
             ),
@@ -160,33 +174,94 @@ class _Step5State extends State<Step5> {
               ),
             ],
           ),
-          child: Center(  // Center the content inside the card
-            child: Text(
-              sport,
-              style: TextStyle(
-                color: isSelected ? Colors.white : Color(0xFF808B9A),
-                fontSize: 16,
-                fontFamily: 'Plus Jakarta Sans',
-                fontWeight: FontWeight.w600,
-                height: 1.50,
+          child: Row(
+            children: [
+              Expanded(
+                flex: 2,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        sport,
+                        style: TextStyle(
+                          color: isSelected ? Colors.white : Color(0xFF808B9A),
+                          fontSize: 16,
+                          fontFamily: 'Plus Jakarta Sans',
+                          fontWeight: FontWeight.w600,
+                          height: 1.50,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
-            ),
+              Expanded(
+                flex: 1,
+                child: Center(
+                  child: isSelected
+                      ? Icon(
+                    frequencyIcons[sport],
+                    size: 70,
+                    color: Colors.white,
+                  )
+                      : ShaderMask(
+                    shaderCallback: (Rect bounds) {
+                      return LinearGradient(
+                        colors: [Color(0xFF4DD4DE), Color(0xFF0C1A37)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ).createShader(bounds);
+                    },
+                    child: Icon(
+                      frequencyIcons[sport],
+                      size: 70,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ),
     );
   }
 
+  // Bouton "Continue"
   Widget _buildActionButton(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 90.0),
+    return Container(
+      color: Colors.white,
+      padding: const EdgeInsets.all(20.0),
       child: ElevatedButton(
-        onPressed: () {
-          if (selectedSports.isNotEmpty) {
-            Navigator.of(context).pushReplacementNamed('/step_six');
+        onPressed: () async {
+          if (frequence_entrainement != null) {
+            String firebaseUid = FirebaseAuth.instance.currentUser!.uid;
+
+            // Afficher la valeur pour déboguer
+            print(
+                'Fréquence d\'entraînement sélectionnée : $frequence_entrainement');
+
+            // Appel de la méthode pour mettre à jour avec frequence_entrainement
+            String result = await _authService.updateUserDetails(
+              firebaseUid: firebaseUid,
+              frequence_entrainement:
+                  frequence_entrainement, // Envoyer la valeur unique
+            );
+
+            // Vérifier le résultat de la mise à jour
+            if (result == 'Mise à jour réussie') {
+              Navigator.of(context).pushReplacementNamed('/step_six');
+            } else {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(result)),
+              );
+            }
           } else {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Please select at least one sport!')),
+              SnackBar(content: Text('Veuillez sélectionner une option !')),
             );
           }
         },

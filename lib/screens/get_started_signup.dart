@@ -17,6 +17,7 @@ class GetStartedSignupScreen extends StatelessWidget {
         return false; // Bloque la flèche de retour
       },
       child: Scaffold(
+        backgroundColor: Colors.white,
         body: Column(
           children: [
             Expanded(
@@ -37,7 +38,7 @@ class GetStartedSignupScreen extends StatelessWidget {
       children: [
         // Utilisation de Image.network avec gestion du chargement et des erreurs
         CircleAvatar(
-          radius: 80,
+          radius: 100,
           backgroundImage: NetworkImage(userImageUrl),
           // Si l'image échoue à se charger, il ne faut pas retourner une valeur ici
           onBackgroundImageError: (error, stackTrace) {
@@ -54,11 +55,11 @@ class GetStartedSignupScreen extends StatelessWidget {
         ),
         const SizedBox(height: 16),
         const Text(
-          'Welcome! We\'re excited to have you here. Let\'s get started and make great things happen!',
+          "Welcome! We\'re excited to have you here.\n Let\'s get started and make great things happen!",
           textAlign: TextAlign.center,
           style: TextStyle(
             color: Color(0xFF808B9A),
-            fontSize: 16,
+            fontSize: 20,
           ),
         ),
       ],
@@ -67,7 +68,7 @@ class GetStartedSignupScreen extends StatelessWidget {
 
   Widget _buildActionButtons(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.all(24.0),
+      padding: const EdgeInsets.all(20.0),
       child: SizedBox(
         width: double.infinity,
         height: 60,
@@ -83,7 +84,10 @@ class GetStartedSignupScreen extends StatelessWidget {
           ),
           child: const Text(
             'Get Started',
-            style: TextStyle(color: Colors.white, fontSize: 14),
+            style: TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+            ),
           ),
         ),
       ),

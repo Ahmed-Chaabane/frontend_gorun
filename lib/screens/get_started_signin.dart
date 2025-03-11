@@ -12,68 +12,71 @@ class GetStartedSigninScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    double scaleFactor = MediaQuery.of(context).size.width / 375;
+    scaleFactor = scaleFactor.clamp(1.0, 1.5); // Set min and max scaling factor (1.0 for no scaling, 1.5 for a cap on scaling)
+
     return WillPopScope(
       onWillPop: () async {
-        return false; // Bloque la flèche de retour
+        return false; // Blocks the back button
       },
       child: Scaffold(
+        backgroundColor: Colors.white,
         body: Column(
           children: [
             Expanded(
               child: Center(
-                child: _buildUserProfile(),
+                child: _buildUserProfile(scaleFactor),
               ),
             ),
-            _buildActionButtons(context),
+            _buildActionButtons(context, scaleFactor),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildUserProfile() {
+  Widget _buildUserProfile(double scaleFactor) {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        // Utilisation d'Image.network avec un fallback d'image en cas d'erreur
+        // Utilizes Image.network with fallback image in case of error
         CircleAvatar(
-          radius: 80,
+          radius: 100 * scaleFactor, // Scales the avatar size
           backgroundImage: NetworkImage(userImageUrl),
-          // Gestion de l'erreur de chargement d'image
           onBackgroundImageError: (error, stackTrace) {
-            // Affichage d'une image par défaut en cas d'erreur de chargement
+            // Fallback image in case of error
           },
         ),
-        const SizedBox(height: 16),
+        SizedBox(height: 16 * scaleFactor),
         Text(
           userName,
-          style: const TextStyle(
-            fontSize: 25,
+          style: TextStyle(
+            fontSize: 25 * scaleFactor,
             fontWeight: FontWeight.bold,
           ),
         ),
-        const SizedBox(height: 16),
+        SizedBox(height: 16 * scaleFactor),
         const Text(
-          'Welcome back! We\'re excited to see you again. Keep going, you\'re doing great!',
+          "Welcome back! We\'re excited to see you again.\n Keep going, you\'re doing great!",
           textAlign: TextAlign.center,
           style: TextStyle(
             color: Color(0xFF808B9A),
-            fontSize: 16,
+            fontSize: 20,
           ),
         ),
       ],
     );
   }
 
-  Widget _buildActionButtons(BuildContext context) {
+  Widget _buildActionButtons(BuildContext context, double scaleFactor) {
     return Padding(
-      padding: const EdgeInsets.all(24.0),
+      padding: EdgeInsets.all(20),
       child: SizedBox(
         width: double.infinity,
         height: 60,
         child: ElevatedButton(
           onPressed: () {
-            Navigator.of(context).pushReplacementNamed('/personalized_journey');
+            Navigator.of(context).pushReplacementNamed('/home_screen');
           },
           style: ElevatedButton.styleFrom(
             backgroundColor: const Color(0xFF162A5A),
@@ -81,9 +84,12 @@ class GetStartedSigninScreen extends StatelessWidget {
               borderRadius: BorderRadius.circular(14),
             ),
           ),
-          child: const Text(
+          child: Text(
             'Get Started',
-            style: TextStyle(color: Colors.white, fontSize: 14),
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 14, // Scales the text size
+            ),
           ),
         ),
       ),

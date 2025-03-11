@@ -45,7 +45,7 @@ class _SplashScreenState extends State<SplashScreen> {
               children: [
                 // Clean logo (without glow)
                 Image.asset(
-                  'assets/images/gorun_logo_white.png', // Replace with your logo asset path
+                  'assets/icons/gorun_logo.png', // Replace with your logo asset path
                   width: 300,
                   height: 300,
                 ),
