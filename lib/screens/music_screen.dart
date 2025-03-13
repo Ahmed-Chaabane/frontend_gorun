@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../services/spotify_service.dart';
 
 import 'audioPlayerModel.dart';
 
@@ -30,16 +31,30 @@ class _MusicScreenState extends State<MusicScreen>
       "audioPath": "assets/audio/song4.mp3",
     },
     {
-      "title": "Power Up",
+      "title": "Limitless",
       "artist": "Neffex Thug Radio",
       "albumArt": "assets/images/album3.jpg",
       "audioPath": "assets/audio/song5.mp3",
     },
+    {
+      "title": "Rise Up",
+      "artist": "Neffex Thug Radio",
+      "albumArt": "assets/images/album4.png",
+      "audioPath": "assets/audio/song1.mp3",
+    },
+    {
+      "title": "Unstoppable",
+      "artist": "Neffex Thug Radio",
+      "albumArt": "assets/images/album5.png",
+      "audioPath": "assets/audio/song2.mp3",
+    },
   ];
+
 
   int _currentTrackIndex = 0;
   bool _isTrackLoading = false;
   bool _isFirstLoad = true; // Indicateur pour la première lecture
+  String? _spotifyToken;
 
   @override
   void initState() {
@@ -53,6 +68,13 @@ class _MusicScreenState extends State<MusicScreen>
         loadTrack(
             _currentTrackIndex); // Charger automatiquement la première piste si nécessaire
       }
+    });
+  }
+
+  Future<void> _fetchSpotifyToken() async {
+    String? token = await SpotifyService.getSpotifyAccessToken();
+    setState(() {
+      _spotifyToken = token;
     });
   }
 

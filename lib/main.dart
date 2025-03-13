@@ -13,6 +13,7 @@ import 'package:frontend_gorun/screens/get_started_signup.dart';
 import 'package:frontend_gorun/screens/hiking_screen.dart';
 import 'package:frontend_gorun/screens/home_screen.dart';
 import 'package:frontend_gorun/screens/music_screen.dart';
+import 'package:frontend_gorun/screens/nutrition_screen.dart';
 import 'package:frontend_gorun/screens/personalized_journey_screen.dart';
 import 'package:frontend_gorun/screens/running_screen.dart';
 import 'package:frontend_gorun/screens/signup_screen.dart';
@@ -33,7 +34,7 @@ import 'package:frontend_gorun/screens/volleyball_screen.dart';
 import 'package:frontend_gorun/screens/weight_screen.dart';
 import 'package:frontend_gorun/screens/yoga_screen.dart';
 import 'package:provider/provider.dart';
-
+import 'providers/notification_provider.dart';
 import 'firebase_options.dart';
 import 'screens/forgot_password_screen.dart';
 import 'screens/reset_password_screen.dart';
@@ -52,16 +53,21 @@ void main() async {
         providers: [
           // Fournisseur pour gérer l'état du lecteur audio
           ChangeNotifierProvider(create: (_) => AudioPlayerModel()),
+
+          // Fournisseur pour gérer les notifications de motivation
+          ChangeNotifierProvider(create: (_) => NotificationProvider()),
         ],
         child: MyApp(),
       ),
     );
   } catch (e) {
     print("Erreur lors de l'initialisation de Firebase: $e");
+
     // Afficher un message d'erreur dans l'UI si Firebase échoue
     runApp(MyAppError(error: e.toString()));
   }
 }
+
 
 class MyApp extends StatelessWidget {
   @override
@@ -113,6 +119,7 @@ class MyApp extends StatelessWidget {
         '/community_challenge_screen': (context) => CommunityChallengeScreen(),
         '/SleepGoalScreen': (context) => SleepGoalScreen(),
         '/hydration_screen': (context) => HydrationScreen(),
+        '/nutrition_screen': (context) => NutritionScreen(),
       },
     );
   }

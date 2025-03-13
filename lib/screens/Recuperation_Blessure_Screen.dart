@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
+import '../utils/gradient_icon_painter.dart';
 import 'Goals_Screen.dart';
 
 class InjuryTypesScreen extends StatefulWidget {
@@ -321,4 +322,43 @@ class _InjuryTypesScreenState extends State<InjuryTypesScreen> {
       ),
     );
   }
+}
+class GradientIconPainter extends CustomPainter {
+  final IconData icon;
+  final double size;
+  final Gradient gradient;
+
+  GradientIconPainter({
+    required this.icon,
+    required this.size,
+    required this.gradient,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final Rect rect = Rect.fromLTWH(0, 0, this.size, this.size);
+    final Paint paint = Paint()..shader = gradient.createShader(rect);
+
+    final TextSpan span = TextSpan(
+      text: String.fromCharCode(icon.codePoint),
+      style: TextStyle(
+        fontSize: this.size,
+        fontFamily: icon.fontFamily,
+        package: icon.fontPackage,
+        foreground: paint,
+      ),
+    );
+
+    final TextPainter textPainter = TextPainter(
+      text: span,
+      textAlign: TextAlign.center,
+      textDirection: TextDirection.ltr,
+    );
+
+    textPainter.layout();
+    textPainter.paint(canvas, Offset.zero);
+  }
+
+  @override
+  bool shouldRepaint(CustomPainter oldDelegate) => false;
 }

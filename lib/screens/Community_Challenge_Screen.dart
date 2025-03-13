@@ -41,22 +41,21 @@ class _CommunityChallengeScreenState extends State<CommunityChallengeScreen> {
   // Fonction pour récupérer les défis depuis l'API Node.js
   Future<void> fetchChallenges() async {
     final response = await http.get(Uri.parse('http://localhost:3000/api/DefiCommunautaire'));
-
     print('Réponse brute de l\'API : ${response.body}'); // Log de débogage
-
     if (response.statusCode == 200) {
       List<dynamic> data = jsonDecode(response.body);
-
       setState(() {
         communityChallenges = data.map((item) {
           return {
-            'id': item['id_defi_communautaire'], // Assurez-vous que c'est le bon nom de colonne
-            'name': item['nom_defi'],
+            'id': item['id_defi_communautaire'],
+            'name': item['nom_defi'] ?? 'Défi Inconnu',
             'icon': iconNameToIconData[item['icon']] ?? FontAwesomeIcons.question,
-            'description': item['description'],
+            'description': item['description'] ?? 'Aucune description disponible',
             'participants': item['participants'] ?? 0,
             'reward': item['recompense'] ?? '',
-            'progress': item['progression'] ?? 0.0,
+            'progress': item['progression']?.toDouble() ?? 0.0,
+            'date_debut': item['date_debut'], // Ajout de la date de début
+            'date_fin': item['date_fin'], // Ajout de la date de fin
           };
         }).toList();
       });
@@ -77,16 +76,12 @@ class _CommunityChallengeScreenState extends State<CommunityChallengeScreen> {
         );
         return;
       }
-
       final String firebaseUid = user.uid;
       print('UID Firebase de l\'utilisateur : $firebaseUid'); // Log de débogage
-
       final response = await http.get(
         Uri.parse('http://localhost:3000/api/utilisateur/firebase_uid/$firebaseUid'),
       );
-
       print('Réponse de l\'API : ${response.statusCode} - ${response.body}'); // Log de débogage
-
       if (response.statusCode != 200) {
         print('Erreur lors de la récupération des informations utilisateur : ${response.statusCode}');
         ScaffoldMessenger.of(context).showSnackBar(
@@ -94,10 +89,8 @@ class _CommunityChallengeScreenState extends State<CommunityChallengeScreen> {
         );
         return;
       }
-
       final Map<String, dynamic> userData = jsonDecode(response.body);
       print('Données utilisateur : $userData'); // Log de débogage
-
       final dynamic userIdDynamic = userData['id_utilisateur'];
       if (userIdDynamic == null) {
         print('ID utilisateur non trouvé dans la réponse de l\'API.'); // Log de débogage
@@ -106,9 +99,7 @@ class _CommunityChallengeScreenState extends State<CommunityChallengeScreen> {
         );
         return;
       }
-
       final int userId = userIdDynamic as int; // Assurez-vous que c'est un entier
-
       final int challengeIdInt = int.tryParse(challengeId) ?? -1; // Utilisez une valeur par défaut si le parsing échoue
       if (challengeIdInt == -1) {
         print('ID du défi invalide : $challengeId'); // Log de débogage
@@ -117,30 +108,26 @@ class _CommunityChallengeScreenState extends State<CommunityChallengeScreen> {
         );
         return;
       }
-
       final Uri url = Uri.parse('http://localhost:3000/api/defiparticipants');
       final body = json.encode({
-        'id_defi': challengeIdInt,
+        'id_defi_communautaire': challengeIdInt,
         'id_utilisateur': userId,
         'firebase_uid': firebaseUid,
         'progression': 0.0,
         'statut': 'en cours',
       });
-
       print('Envoi de la requête POST à /api/defiparticipants avec le corps : $body'); // Log de débogage
-
       final postResponse = await http.post(
         url,
         headers: {'Content-Type': 'application/json'},
         body: body,
       );
-
       print('Réponse de l\'API : ${postResponse.statusCode} - ${postResponse.body}'); // Log de débogage
-
       if (postResponse.statusCode == 201) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Vous avez rejoint le défi avec succès !')),
         );
+        fetchChallenges(); // Rafraîchir les données après avoir rejoint un défi
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Erreur lors de la participation au défi.')),
@@ -154,13 +141,38 @@ class _CommunityChallengeScreenState extends State<CommunityChallengeScreen> {
     }
   }
 
+  // Fonction pour calculer le temps restant
+  String calculateRemainingTime(String dateFin) {
+    try {
+      final DateTime endDate = DateTime.parse(dateFin);
+      final DateTime now = DateTime.now();
+      final Duration remainingDuration = endDate.difference(now);
+
+      if (remainingDuration.inDays > 0) {
+        return '${remainingDuration.inDays} jours restants';
+      } else if (remainingDuration.inHours > 0) {
+        return '${remainingDuration.inHours} heures restantes';
+      } else if (remainingDuration.inMinutes > 0) {
+        return '${remainingDuration.inMinutes} minutes restantes';
+      } else {
+        return 'Expiré';
+      }
+    } catch (e) {
+      print('Erreur lors du calcul du temps restant : $e');
+      return 'Date invalide';
+    }
+  }
+
+  // Fonction pour construire une carte de défi
   Widget _buildChallengeCard(Map<String, dynamic> challengeData, int index) {
-    final String challengeName = challengeData['name'];
-    final IconData icon = challengeData['icon'];
-    final String description = challengeData['description'];
-    final int participants = challengeData['participants'];
-    final String reward = challengeData['reward'];
-    final double progress = challengeData['progress'];
+    final String challengeName = challengeData['name'] ?? 'Défi Inconnu';
+    final IconData icon = challengeData['icon'] ?? FontAwesomeIcons.question;
+    final String description = challengeData['description'] ?? 'Aucune description disponible';
+    final int participants = challengeData['participants'] ?? 0; // Valeur par défaut : 0
+    final String reward = challengeData['reward'] ?? 'Aucune récompense'; // Valeur par défaut : texte
+    final double progress = challengeData['progress']?.toDouble() ?? 0.0; // Valeur par défaut : 0.0
+    final String dateFin = challengeData['date_fin'] ?? ''; // Récupérer la date de fin
+    final String remainingTime = calculateRemainingTime(dateFin); // Calculer le temps restant
     bool isSelected = selectedChallenge == challengeName;
 
     return Padding(
@@ -175,7 +187,7 @@ class _CommunityChallengeScreenState extends State<CommunityChallengeScreen> {
           duration: Duration(milliseconds: 500),
           curve: Curves.easeInOut,
           width: double.infinity,
-          height: isSelected ? 220 : 150, // Expand the card if selected
+          height: isSelected ? 280 : 150,
           decoration: BoxDecoration(
             color: isSelected ? Color(0xFFF5BA41) : Colors.white,
             borderRadius: BorderRadius.circular(14),
@@ -186,16 +198,9 @@ class _CommunityChallengeScreenState extends State<CommunityChallengeScreen> {
                 offset: const Offset(0, 3),
                 spreadRadius: -1.50,
               ),
-              BoxShadow(
-                color: const Color(0x0C0C1A4B),
-                blurRadius: 3.75,
-                offset: const Offset(0, 0),
-                spreadRadius: 0,
-              ),
             ],
           ),
           child: SingleChildScrollView(
-            // Ajout de SingleChildScrollView pour éviter le débordement
             child: Row(
               children: [
                 Expanded(
@@ -239,6 +244,14 @@ class _CommunityChallengeScreenState extends State<CommunityChallengeScreen> {
                               SizedBox(height: 5),
                               Text(
                                 'Reward: $reward',
+                                style: TextStyle(
+                                  color: isSelected ? Colors.white : Color(0xFF808B9A),
+                                  fontSize: 14,
+                                ),
+                              ),
+                              SizedBox(height: 5),
+                              Text(
+                                'Temps restant: $remainingTime', // Afficher le temps restant
                                 style: TextStyle(
                                   color: isSelected ? Colors.white : Color(0xFF808B9A),
                                   fontSize: 14,

@@ -1,5 +1,7 @@
+import 'dart:convert';
+
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:frontend_gorun/screens/basketball_screen.dart';
@@ -8,20 +10,21 @@ import 'package:frontend_gorun/screens/football_screen.dart';
 import 'package:frontend_gorun/screens/hiking_screen.dart';
 import 'package:frontend_gorun/screens/music_screen.dart';
 import 'package:frontend_gorun/screens/running_screen.dart';
+import 'package:frontend_gorun/screens/signin_screen.dart';
 import 'package:frontend_gorun/screens/sleep_screen.dart';
 import 'package:frontend_gorun/screens/swimming_screen.dart';
 import 'package:frontend_gorun/screens/tennis_screen.dart';
 import 'package:frontend_gorun/screens/volleyball_screen.dart';
 import 'package:frontend_gorun/screens/weight_screen.dart';
 import 'package:frontend_gorun/screens/yoga_screen.dart';
-import 'package:timezone/data/latest.dart' as tz;
 import 'package:http/http.dart' as http;
-import 'dart:convert';
-import 'package:firebase_auth/firebase_auth.dart';
-
+import 'package:provider/provider.dart';
+import 'package:timezone/data/latest.dart' as tz;
+import '/providers/notification_provider.dart';
 import 'Community_Challenge_Screen.dart';
 import 'Goals_Screen.dart';
 import 'Hydration_Screen.dart';
+import 'nutrition_screen.dart';
 
 // Constants for reusability
 class AppConstants {
@@ -254,6 +257,12 @@ class _HomeScreenState extends State<HomeScreen> {
     _pageController = PageController(viewportFraction: 0.9);
     initNotifications();
     fetchUserChallenges(); // Récupérer les défis de l'utilisateur au démarrage
+
+    // Appel à fetchNotification via le provider
+    Future.delayed(Duration.zero, () {
+      // Appelle fetchNotification après l'initialisation
+      Provider.of<NotificationProvider>(context, listen: false).fetchNotification();
+    });
   }
 
   @override
@@ -274,16 +283,16 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Map<String, IconData> iconNameToIconData = {
     'dumbbell': FontAwesomeIcons.dumbbell,
-    'running': FontAwesomeIcons.running,
+    'running': FontAwesomeIcons.personRunning,
     'spa': FontAwesomeIcons.spa,
-    'heartbeat': FontAwesomeIcons.heartbeat,
-    'weight': FontAwesomeIcons.weight,
+    'heartbeat': FontAwesomeIcons.heartPulse,
+    'weight': FontAwesomeIcons.weightScale,
     'bicycle': FontAwesomeIcons.bicycle,
-    'swimmer': FontAwesomeIcons.swimmer,
+    'swimmer': FontAwesomeIcons.personSwimming,
     'om': FontAwesomeIcons.om,
     'shoePrints': FontAwesomeIcons.shoePrints,
     'users': FontAwesomeIcons.users,
-    'hiking': FontAwesomeIcons.hiking,
+    'hiking': FontAwesomeIcons.personHiking,
     'bed': FontAwesomeIcons.bed,
     'dancing': FontAwesomeIcons.personDressBurst,
     // Ajoute d'autres icônes ici selon le besoin
@@ -388,22 +397,91 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildTopSection() {
     return Container(
       padding: AppConstants.kDefaultPadding,
+      color: Colors.white,  // Arrière-plan blanc
       child: Row(
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
-          ShaderMask(
-            shaderCallback: (Rect bounds) {
-              return AppConstants.kPrimaryGradient.createShader(bounds);
+          PopupMenuButton<String>(
+            onSelected: (value) {
+              if (value == 'logout') {
+                _handleSignOut(context); // Appeler la fonction de déconnexion
+              }
             },
-            child: IconButton(
-              icon: const Icon(Icons.menu, size: 35),
-              onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Menu ouvert !')),
-                );
+            icon: ShaderMask(
+              shaderCallback: (Rect bounds) {
+                return AppConstants.kPrimaryGradient.createShader(bounds);  // Dégradé pour l'icône
               },
-              color: Colors.white,
+              child: Icon(Icons.menu, size: 35, color: Colors.white),  // Icône du menu
             ),
+            color: Colors.white, // Arrière-plan blanc du menu
+            itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+              PopupMenuItem<String>(
+                value: 'profile',
+                child: ListTile(
+                  leading: Icon(Icons.person),
+                  title: Text('User Profile'),
+                ),
+              ),
+              PopupMenuItem<String>(
+                value: 'settings',
+                child: ListTile(
+                  leading: Icon(Icons.settings),
+                  title: Text('Settings'),
+                ),
+              ),
+              PopupMenuItem<String>(
+                value: 'workout_history',
+                child: ListTile(
+                  leading: Icon(Icons.history),
+                  title: Text('Workout History'),
+                ),
+              ),
+              PopupMenuItem<String>(
+                value: 'challenges',
+                child: ListTile(
+                  leading: Icon(Icons.group),
+                  title: Text('Challenges'),
+                ),
+              ),
+              PopupMenuItem<String>(
+                value: 'music',
+                child: ListTile(
+                  leading: Icon(Icons.music_note),
+                  title: Text('My Playlist'),
+                ),
+              ),
+              PopupMenuItem<String>(
+                value: 'connect_apps',
+                child: ListTile(
+                  leading: Icon(Icons.link),
+                  title: Text('Connect with other apps'),
+                ),
+              ),
+              PopupMenuItem<String>(
+                value: 'support',
+                child: ListTile(
+                  leading: Icon(Icons.help),
+                  title: Text('Support / Help'),
+                ),
+              ),
+              PopupMenuItem<String>(
+                value: 'about',
+                child: ListTile(
+                  leading: Icon(Icons.info),
+                  title: Text('About the app'),
+                ),
+              ),
+              PopupMenuItem<String>(
+                value: 'logout',
+                child: ListTile(
+                  leading: Icon(Icons.logout, color: Colors.red),
+                  title: Text(
+                    'Logout',
+                    style: TextStyle(color: Colors.red),
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -556,6 +634,7 @@ class _HomeScreenState extends State<HomeScreen> {
       'Goals': () => DefineGoalScreen(),
       'Sleep': () => SleepGoalScreen(),
       'Hydration': () => HydrationScreen(),
+      'Nutrition': () => NutritionScreen(),
     };
 
     return Expanded(
@@ -865,6 +944,30 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
       ),
+    );
+  }
+}
+
+Future<void> _handleSignOut(BuildContext context) async {
+  try {
+    // Déconnecter l'utilisateur via Firebase
+    await FirebaseAuth.instance.signOut();
+
+    // Naviguer vers l'écran de connexion et effacer la pile de navigation
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(builder: (context) => LoginScreen()), // Remplacez par votre écran de connexion
+          (route) => false, // Supprime toutes les routes précédentes
+    );
+
+    // Message de confirmation
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Déconnexion réussie')),
+    );
+  } catch (e) {
+    print("Erreur lors de la déconnexion : $e");
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Une erreur est survenue : $e')),
     );
   }
 }

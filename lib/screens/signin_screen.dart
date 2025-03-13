@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:frontend_gorun/services/auth_service.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
 import 'get_started_signin.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -19,13 +18,11 @@ class _LoginScreenState extends State<LoginScreen> {
   bool isPasswordVisible = false;
   bool isCheckboxChecked = false;
   bool isLoading = false;
-
   String? _email; // Champ pour stocker l'email saisi
   String? _password; // Champ pour stocker le mot de passe saisi
-
   GoogleSignIn _googleSignIn = GoogleSignIn(
     clientId:
-        '358465763062-0isj5g1km6p4nr01atoj1hagftotd1v7.apps.googleusercontent.com',
+    '358465763062-0isj5g1km6p4nr01atoj1hagftotd1v7.apps.googleusercontent.com',
   );
 
   void _handleGoogleSignIn() async {
@@ -33,7 +30,6 @@ class _LoginScreenState extends State<LoginScreen> {
       setState(() {
         isLoading = true;
       });
-
       final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
       if (googleUser == null) {
         setState(() {
@@ -41,22 +37,18 @@ class _LoginScreenState extends State<LoginScreen> {
         });
         return; // L'utilisateur a annulé la connexion
       }
-
-      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+      final GoogleSignInAuthentication googleAuth =
+      await googleUser.authentication;
       final OAuthCredential credential = GoogleAuthProvider.credential(
         accessToken: googleAuth.accessToken,
         idToken: googleAuth.idToken,
       );
-
       final UserCredential userCredential =
-          await FirebaseAuth.instance.signInWithCredential(credential);
-
+      await FirebaseAuth.instance.signInWithCredential(credential);
       final User? user = userCredential.user;
-
       if (user != null) {
         String userName = user.displayName ?? "Utilisateur";
         String userImage = user.photoURL ?? "";
-
         // Redirection vers GetStartedScreen avec les informations
         Navigator.push(
           context,
@@ -86,28 +78,30 @@ class _LoginScreenState extends State<LoginScreen> {
     Future.delayed(const Duration(seconds: 30), _autoScrollQuotes);
   }
 
-  // Load saved credentials from shared preferences
+  // Save credentials to shared preferences
+  _saveCredentials() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    if (isCheckboxChecked) {
+      print("Sauvegarde des informations : $_email, $_password");
+      prefs.setString('email', _email!);
+      prefs.setString('password', _password!);
+      prefs.setBool('rememberMe', true);
+    } else {
+      print("Suppression des informations");
+      prefs.remove('email');
+      prefs.remove('password');
+      prefs.remove('rememberMe');
+    }
+  }
+
   _loadSavedCredentials() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     setState(() {
       _email = prefs.getString('email');
       _password = prefs.getString('password');
       isCheckboxChecked = prefs.getBool('rememberMe') ?? false;
+      print("Chargement des informations : $_email, $_password, $isCheckboxChecked");
     });
-  }
-
-  // Save credentials to shared preferences
-  _saveCredentials() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    if (isCheckboxChecked) {
-      prefs.setString('email', _email!);
-      prefs.setString('password', _password!);
-      prefs.setBool('rememberMe', true);
-    } else {
-      prefs.remove('email');
-      prefs.remove('password');
-      prefs.remove('rememberMe');
-    }
   }
 
   void _autoScrollQuotes() {
@@ -210,28 +204,28 @@ class _LoginScreenState extends State<LoginScreen> {
   List<Map<String, dynamic>> _quotes = [
     {
       'text':
-          '“I’ve missed more than 9,000 shots in my career. I’ve lost almost 300 games. Twenty-six times I’ve been trusted to take the game-winning shot and missed. I’ve failed over and over and over again in my life. And that is why I succeed.”',
+      '“I’ve missed more than 9,000 shots in my career. I’ve lost almost 300 games. Twenty-six times I’ve been trusted to take the game-winning shot and missed. I’ve failed over and over and over again in my life. And that is why I succeed.”',
       'author': 'Michael Jordan',
       'role': 'Basketball Player',
       'image': 'assets/images/legend/jordan.png',
     },
     {
       'text':
-          '“I am the greatest, I said that even before I knew I was. I always knew I was destined for greatness. Some people will say, \'You\'re lucky.\' But luck is a combination of hard work and opportunity. If you put in the effort, the world will open doors for you.”',
+      '“I am the greatest, I said that even before I knew I was. I always knew I was destined for greatness. Some people will say, \'You\'re lucky.\' But luck is a combination of hard work and opportunity. If you put in the effort, the world will open doors for you.”',
       'author': 'Muhammad Ali',
       'role': 'Boxer',
       'image': 'assets/images/legend/klay.png',
     },
     {
       'text':
-          '“I don\'t think limits. I think you can go as far as your talent and effort can take you. A true champion knows that the limit does not exist. You must aim high, push yourself, and keep going until you’re breaking your own records, rewriting your own history.”',
+      '“I don\'t think limits. I think you can go as far as your talent and effort can take you. A true champion knows that the limit does not exist. You must aim high, push yourself, and keep going until you’re breaking your own records, rewriting your own history.”',
       'author': 'Usain Bolt',
       'role': 'Olympic Sprinter',
       'image': 'assets/images/legend/bolt.png',
     },
     {
       'text':
-          '“Success is not about how much money you make, but the difference you make in people’s lives. Being a leader is not about being the loudest in the room. It’s about inspiring others, having the courage to lead with integrity, and never giving up on the journey.”',
+      '“Success is not about how much money you make, but the difference you make in people’s lives. Being a leader is not about being the loudest in the room. It’s about inspiring others, having the courage to lead with integrity, and never giving up on the journey.”',
       'author': 'Stephen Curry',
       'role': 'Basketball Player',
       'image': 'assets/images/legend/curry.png',
@@ -312,7 +306,7 @@ class _LoginScreenState extends State<LoginScreen> {
       mainAxisAlignment: MainAxisAlignment.center,
       children: List.generate(
         _quotes.length,
-        (index) => AnimatedContainer(
+            (index) => AnimatedContainer(
           duration: const Duration(milliseconds: 300),
           margin: const EdgeInsets.symmetric(horizontal: 4),
           width: _currentPage == index ? 12 : 8,
@@ -383,9 +377,7 @@ class _LoginScreenState extends State<LoginScreen> {
         decoration: InputDecoration(
           labelText: 'Email',
           labelStyle: TextStyle(color: Color(0xFF39434F)),
-          // Consistent label color
           prefixIcon: Icon(Icons.person, color: Color(0xFF0C1A37)),
-          // Uniform icon for email field
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(14),
             borderSide: BorderSide(color: Color(0xFF0C1A37)),
@@ -396,9 +388,7 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
           filled: true,
           fillColor: Colors.white,
-          // White background color
-          contentPadding:
-              EdgeInsets.symmetric(horizontal: 16), // Padding for text input
+          contentPadding: EdgeInsets.symmetric(horizontal: 16),
         ),
         onChanged: (value) {
           setState(() {
@@ -416,7 +406,7 @@ class _LoginScreenState extends State<LoginScreen> {
         obscureText: !isPasswordVisible,
         decoration: InputDecoration(
           labelText: 'Password',
-          labelStyle: TextStyle(color: Color(0xFF39434F)), // Consistent label color
+          labelStyle: TextStyle(color: Color(0xFF39434F)),
           prefixIcon: Icon(Icons.lock, color: Color(0xFF0C1A37)),
           suffixIcon: IconButton(
             icon: Icon(
@@ -425,7 +415,7 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
             onPressed: () {
               setState(() {
-                isPasswordVisible = !isPasswordVisible; // Toggle visibility
+                isPasswordVisible = !isPasswordVisible;
               });
             },
           ),
@@ -438,8 +428,8 @@ class _LoginScreenState extends State<LoginScreen> {
             borderSide: BorderSide(color: Color(0xFF4DD4DE)),
           ),
           filled: true,
-          fillColor: Colors.white, // White background color
-          contentPadding: EdgeInsets.symmetric(horizontal: 16), // Padding for text input
+          fillColor: Colors.white,
+          contentPadding: EdgeInsets.symmetric(horizontal: 16),
         ),
         onChanged: (value) {
           setState(() {
@@ -449,7 +439,6 @@ class _LoginScreenState extends State<LoginScreen> {
       ),
     );
   }
-
 
   Widget _buildRememberMe() {
     return Row(
@@ -478,53 +467,52 @@ class _LoginScreenState extends State<LoginScreen> {
           height: 60,
           child: ElevatedButton(
             onPressed: isLoading
-                ? null // Désactiver le bouton pendant le chargement
+                ? null
                 : () async {
-                    if (_email == null ||
-                        _email!.isEmpty ||
-                        _password == null ||
-                        _password!.isEmpty) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                            content: Text('Veuillez remplir tous les champs.')),
-                      );
-                      return;
-                    }
+              if (_email == null ||
+                  _email!.isEmpty ||
+                  _password == null ||
+                  _password!.isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                      content: Text('Veuillez remplir tous les champs.')),
+                );
+                return;
+              }
+              setState(() {
+                isLoading = true;
+              });
+              try {
+                // Sauvegarder les informations si la case est cochée
+                _saveCredentials();
 
-                    setState(() {
-                      isLoading = true; // Démarrer le chargement
-                    });
-
-                    try {
-                      String result =
-                          await AuthService().signInWithEmailAndPassword(
-                        email: _email!,
-                        password: _password!,
-                      );
-
-                      if (result.startsWith('Connexion réussie')) {
-                        Navigator.pushReplacementNamed(
-                            context, '/get_started_signin');
-                      } else {
-                        ScaffoldMessenger.of(context)
-                            .showSnackBar(SnackBar(content: Text(result)));
-                      }
-                    } finally {
-                      setState(() {
-                        isLoading = false; // Arrêter le chargement
-                      });
-                    }
-                  },
+                String result =
+                await AuthService().signInWithEmailAndPassword(
+                  email: _email!,
+                  password: _password!,
+                );
+                if (result.startsWith('Connexion réussie')) {
+                  Navigator.pushReplacementNamed(
+                      context, '/get_started_signin');
+                } else {
+                  ScaffoldMessenger.of(context)
+                      .showSnackBar(SnackBar(content: Text(result)));
+                }
+              } finally {
+                setState(() {
+                  isLoading = false;
+                });
+              }
+            },
             style: ElevatedButton.styleFrom(
-              backgroundColor:
-                  isCheckboxChecked ? Color(0xFF162A5A) : Color(0xFFC6CED9),
+              backgroundColor: Color(0xFF0C1A37),
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(14)),
             ),
             child: isLoading
                 ? const CircularProgressIndicator(color: Colors.white)
                 : const Text('Join now',
-                    style: TextStyle(color: Colors.white, fontSize: 14)),
+                style: TextStyle(color: Colors.white, fontSize: 14)),
           ),
         ),
         const SizedBox(height: 8),
@@ -562,17 +550,17 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Widget _buildGoogleSignInButton() {
     return SizedBox(
-      width: double.infinity, // Largeur maximale
-      height: 60, // Hauteur fixe
+      width: double.infinity,
+      height: 60,
       child: ElevatedButton(
         onPressed: _handleGoogleSignIn,
         style: ElevatedButton.styleFrom(
-          backgroundColor: Color(0xFF4285F4), // Couleur bleue de Google
-          foregroundColor: Colors.white, // Texte en blanc
+          backgroundColor: Color(0xFF4285F4),
+          foregroundColor: Colors.white,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14), // Bords arrondis
+            borderRadius: BorderRadius.circular(14),
           ),
-          padding: EdgeInsets.zero, // Supprime le padding interne
+          padding: EdgeInsets.zero,
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,

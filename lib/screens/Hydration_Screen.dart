@@ -1,11 +1,10 @@
 import 'dart:convert';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
-
-import '../utils/gradient_icon_painter.dart'; // Assurez-vous que ce fichier existe
+import '../utils/gradient_icon_painter.dart';
 
 class HydrationScreen extends StatefulWidget {
   @override
@@ -46,6 +45,27 @@ class _HydrationScreenState extends State<HydrationScreen> {
     fetchHydrationGoals(); // Charger les objectifs d'hydratation
     fetchUserHydrationProgress(); // Charger la progression de l'utilisateur
     _loadGlassesConsumed(); // Charger les verres consommés
+
+    // Vérifier si l'utilisateur a atteint l'objectif
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await _checkIfGoalAchieved();
+    });
+  }
+
+  Future<void> _checkIfGoalAchieved() async {
+    for (var goal in hydrationGoals) {
+      final String goalName = goal['name'];
+      final int requiredGlasses = goal['required_glasses'] ?? 0;
+
+      if (glassesConsumed[goalName] != null &&
+          glassesConsumed[goalName]! >= requiredGlasses) {
+        setState(() {
+          userHydrationProgress =
+              null; // Réinitialiser la participation de l'utilisateur
+        });
+        break;
+      }
+    }
   }
 
   Future<void> incrementGlassesConsumed(String goalName, int requiredGlasses) async {
@@ -63,6 +83,7 @@ class _HydrationScreenState extends State<HydrationScreen> {
       // Vérifier si l'objectif est atteint
       if (glassesConsumed[goalName]! >= requiredGlasses) {
         _resetProgress(goalName); // Réinitialiser la progression
+        deactivateUserHydrationProgress(); // Désactiver l'objectif dans le backend
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Félicitations ! Vous avez atteint votre objectif.')),
         );
@@ -217,12 +238,22 @@ class _HydrationScreenState extends State<HydrationScreen> {
       return;
     }
 
-    // Check if the user is already participating in a goal
-    if (userHydrationProgress != null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Vous participez déjà à un programme d\'hydratation.')),
-      );
-      return;
+    // Vérifier si l'utilisateur a un objectif actif
+    final activeGoalResponse = await http.get(
+      Uri.parse(
+          'http://localhost:3000/api/utilisateurhydration/firebase/${user.uid}/active'),
+    );
+
+    if (activeGoalResponse.statusCode == 200) {
+      final activeGoal = jsonDecode(activeGoalResponse.body);
+      if (activeGoal != null && activeGoal['is_active'] == true) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content:
+                  Text('Vous participez déjà à un programme d\'hydratation.')),
+        );
+        return;
+      }
     }
 
     final String firebaseUid = user.uid;
@@ -257,7 +288,10 @@ class _HydrationScreenState extends State<HydrationScreen> {
         'id_utilisateur': userId,
         'id_hydration_goal': goalIdInt,
         'firebase_uid': firebaseUid,
+        'is_active': true, // Marquer l'objectif comme actif
       });
+
+      print('Données envoyées : $body'); // Afficher les données envoyées
 
       // Envoyer la requête POST
       final postResponse = await http.post(
@@ -265,6 +299,9 @@ class _HydrationScreenState extends State<HydrationScreen> {
         headers: {'Content-Type': 'application/json'},
         body: body,
       );
+
+      print(
+          'Réponse de l\'API : ${postResponse.body}'); // Afficher la réponse de l'API
 
       if (postResponse.statusCode == 201) {
         setState(() {
@@ -278,7 +315,7 @@ class _HydrationScreenState extends State<HydrationScreen> {
         );
       } else {
         final errorResponse = jsonDecode(postResponse.body);
-        final errorMessage = errorResponse['message'] ?? 'Erreur inconnue';
+        final errorMessage = errorResponse['error'] ?? 'Erreur inconnue';
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Erreur lors de la participation à l\'objectif : $errorMessage')),
         );
@@ -290,24 +327,32 @@ class _HydrationScreenState extends State<HydrationScreen> {
     }
   }
 
-  // Fonction pour supprimer un objectif d'hydratation
-  Future<void> deleteHydrationGoal(int goalId) async {
+  Future<void> deactivateUserHydrationProgress() async {
+    final User? user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
     try {
-      final response = await http.delete(
-        Uri.parse('http://localhost:3000/api/hydrationgoal/$goalId'),
+      final response = await http.patch(
+        Uri.parse(
+            'http://localhost:3000/api/utilisateurhydration/firebase/${user.uid}'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({'is_active': false}),
       );
 
       if (response.statusCode == 200) {
         setState(() {
-          hydrationGoals.removeWhere((goal) => goal['id'] == goalId);
+          userHydrationProgress = null; // Réinitialiser l'état de participation
         });
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Objectif supprimé avec succès.')),
+          SnackBar(content: Text('Objectif désactivé avec succès.')),
         );
       } else {
-        final errorMessage = jsonDecode(response.body)['message'] ?? 'Erreur inconnue';
+        final errorMessage =
+            jsonDecode(response.body)['error'] ?? 'Erreur inconnue';
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erreur lors de la suppression de l\'objectif : $errorMessage')),
+          SnackBar(
+              content: Text(
+                  'Erreur lors de la désactivation de l\'objectif : $errorMessage')),
         );
       }
     } catch (e) {
