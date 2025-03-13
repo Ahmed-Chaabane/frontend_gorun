@@ -21,16 +21,16 @@ class _DefineGoalScreenState extends State<DefineGoalScreen> {
   // Mapper les icônes
   final Map<String, IconData> iconNameToIconData = {
     'dumbbell': FontAwesomeIcons.dumbbell,
-    'weight': FontAwesomeIcons.weight,
-    'running': FontAwesomeIcons.running,
+    'weight': FontAwesomeIcons.weightScale,
+    'running': FontAwesomeIcons.personRunning,
     'spa': FontAwesomeIcons.spa,
-    'heartbeat': FontAwesomeIcons.heartbeat,
-    'tachometer-alt': FontAwesomeIcons.tachometerAlt,
+    'heartbeat': FontAwesomeIcons.heartPulse,
+    'tachometer-alt': FontAwesomeIcons.gaugeHigh,
     'heart': FontAwesomeIcons.heart,
     'user': FontAwesomeIcons.user,
     'om': FontAwesomeIcons.om,
     'brain': FontAwesomeIcons.brain,
-    'balance-scale': FontAwesomeIcons.balanceScale,
+    'balance-scale': FontAwesomeIcons.scaleBalanced,
     'bed': FontAwesomeIcons.bed,
   };
 

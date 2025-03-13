@@ -32,7 +32,7 @@ class _NutritionScreenState extends State<NutritionScreen> {
     'kiwiBird': FontAwesomeIcons.kiwiBird,
     'mugHot': FontAwesomeIcons.mugHot,
     'pizzaSlice': FontAwesomeIcons.pizzaSlice,
-    'hamburger': FontAwesomeIcons.hamburger,
+    'hamburger': FontAwesomeIcons.burger,
     'carrot': FontAwesomeIcons.carrot,
     'breadSlice': FontAwesomeIcons.breadSlice,
     'egg': FontAwesomeIcons.egg,

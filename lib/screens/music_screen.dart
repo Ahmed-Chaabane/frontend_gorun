@@ -54,7 +54,6 @@ class _MusicScreenState extends State<MusicScreen>
   int _currentTrackIndex = 0;
   bool _isTrackLoading = false;
   bool _isFirstLoad = true; // Indicateur pour la première lecture
-  String? _spotifyToken;
 
   @override
   void initState() {
@@ -68,13 +67,6 @@ class _MusicScreenState extends State<MusicScreen>
         loadTrack(
             _currentTrackIndex); // Charger automatiquement la première piste si nécessaire
       }
-    });
-  }
-
-  Future<void> _fetchSpotifyToken() async {
-    String? token = await SpotifyService.getSpotifyAccessToken();
-    setState(() {
-      _spotifyToken = token;
     });
   }
 

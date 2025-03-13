@@ -27,7 +27,7 @@ class _SleepGoalScreenState extends State<SleepGoalScreen> {
     'bed_icon': FontAwesomeIcons.bed,
     'bell_slash_icon': FontAwesomeIcons.bellSlash,
     'calendar_check_icon': FontAwesomeIcons.calendarCheck,
-    'coffee_icon': FontAwesomeIcons.coffee,
+    'coffee_icon': FontAwesomeIcons.mugSaucer,
   };
 
   @override

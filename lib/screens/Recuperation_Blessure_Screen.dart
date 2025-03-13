@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
-import '../utils/gradient_icon_painter.dart';
-import 'Goals_Screen.dart';
 
 class InjuryTypesScreen extends StatefulWidget {
   @override

@@ -23,19 +23,18 @@ class _CommunityChallengeScreenState extends State<CommunityChallengeScreen> {
 
   Map<String, IconData> iconNameToIconData = {
     'dumbbell': FontAwesomeIcons.dumbbell,
-    'running': FontAwesomeIcons.running,
+    'running': FontAwesomeIcons.personRunning,
     'spa': FontAwesomeIcons.spa,
-    'heartbeat': FontAwesomeIcons.heartbeat,
-    'weight': FontAwesomeIcons.weight,
+    'heartbeat': FontAwesomeIcons.heartPulse,
+    'weight': FontAwesomeIcons.weightScale,
     'bicycle': FontAwesomeIcons.bicycle,
-    'swimmer': FontAwesomeIcons.swimmer,
+    'swimmer': FontAwesomeIcons.personSwimming,
     'om': FontAwesomeIcons.om,
     'shoePrints': FontAwesomeIcons.shoePrints,
     'users': FontAwesomeIcons.users,
-    'hiking': FontAwesomeIcons.hiking,
+    'hiking': FontAwesomeIcons.personHiking,
     'bed': FontAwesomeIcons.bed,
     'dancing': FontAwesomeIcons.personDressBurst,
-    // Ajoute d'autres icônes ici selon le besoin
   };
 
   // Fonction pour récupérer les défis depuis l'API Node.js

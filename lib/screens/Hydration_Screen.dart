@@ -29,7 +29,7 @@ class _HydrationScreenState extends State<HydrationScreen> {
     'dumbbell': FontAwesomeIcons.dumbbell,
     'chartLine': FontAwesomeIcons.chartLine,
     'sun': FontAwesomeIcons.sun,
-    'tintSlash': FontAwesomeIcons.tintSlash,
+    'tintSlash': FontAwesomeIcons.dropletSlash,
     'recycle': FontAwesomeIcons.recycle,
     'utensils': FontAwesomeIcons.utensils,
     'moon': FontAwesomeIcons.moon,
