@@ -15,6 +15,12 @@
     the `--base-href` argument provided to `flutter build`.
   -->
   <script>
+    if (window.location.hostname == 'localhost') {
+      window.$debugMode = false;
+    }
+  </script>
+
+  <script>
     if (!window.AudioContext) {
       window.AudioContext = window.webkitAudioContext;
     }

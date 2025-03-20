@@ -20,11 +20,13 @@ import 'package:frontend_gorun/screens/yoga_screen.dart';
 import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
 import 'package:timezone/data/latest.dart' as tz;
+import '../services/Spotify_Service.dart';
 import '/providers/notification_provider.dart';
 import 'Community_Challenge_Screen.dart';
 import 'Goals_Screen.dart';
 import 'Hydration_Screen.dart';
 import 'nutrition_screen.dart';
+
 
 // Constants for reusability
 class AppConstants {
@@ -349,7 +351,8 @@ class _HomeScreenState extends State<HomeScreen> {
       );
     }
   }
-  
+  String? accessToken;
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -474,7 +477,7 @@ class _HomeScreenState extends State<HomeScreen> {
               PopupMenuItem<String>(
                 value: 'logout',
                 child: ListTile(
-                  leading: Icon(Icons.logout, color: Colors.red),
+                  leading: Icon(Icons.power_settings_new_sharp, color: Colors.red),
                   title: Text(
                     'Logout',
                     style: TextStyle(color: Colors.red),

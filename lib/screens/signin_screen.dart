@@ -384,7 +384,7 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(14),
-            borderSide: BorderSide(color: Color(0xFF4DD4DE)),
+            borderSide: BorderSide(color: Color(0xFF1B85F3)),
           ),
           filled: true,
           fillColor: Colors.white,
@@ -425,7 +425,7 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(14),
-            borderSide: BorderSide(color: Color(0xFF4DD4DE)),
+            borderSide: BorderSide(color: Color(0xFF1B85F3)),
           ),
           filled: true,
           fillColor: Colors.white,
@@ -450,14 +450,19 @@ class _LoginScreenState extends State<LoginScreen> {
               isCheckboxChecked = value!;
             });
           },
+          activeColor: isCheckboxChecked ? const Color(0xFF1B85F3) : const Color(0xFF808B9A), // Change couleur du checkbox
         ),
-        const Text(
+        Text(
           'Remember information',
-          style: TextStyle(color: Color(0xFF808B9A), fontSize: 14),
+          style: TextStyle(
+            color: const Color(0xFF808B9A),
+            fontSize: 14,
+          ),
         ),
       ],
     );
   }
+
 
   Widget _buildActionButtons() {
     return Column(

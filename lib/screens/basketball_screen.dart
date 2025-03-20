@@ -297,6 +297,23 @@ class _BasketballTrackerState extends State<BasketballTracker>
     );
   }
 
+  // Fonction pour construire la section supérieure
+  Widget _buildTopSection() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 20),
+      child: Row(
+        children: [
+          IconButton(
+            icon: const Icon(Icons.arrow_back, color: Color(0xFF808B9A), size: 24),
+            onPressed: () => Navigator.of(context).pushReplacementNamed('/home_screen'),
+          ),
+          const SizedBox(width: 8),
+          const Spacer(),
+        ],
+      ),
+    );
+  }
+
   Widget _buildSummaryRow(IconData icon, String title, String value, Color iconColor) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
@@ -343,6 +360,7 @@ class _BasketballTrackerState extends State<BasketballTracker>
           ListView(
             padding: EdgeInsets.zero,
             children: [
+              _buildTopSection(),
               _buildMainTitle(),
               _buildDateText(),
               _buildBasketballIconSection(),

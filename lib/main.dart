@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:frontend_gorun/screens/Community_Challenge_Screen.dart';
 import 'package:frontend_gorun/screens/Goals_Screen.dart';
 import 'package:frontend_gorun/screens/Hydration_Screen.dart';
-import 'package:frontend_gorun/screens/Recuperation_Blessure_Screen.dart';
 import 'package:frontend_gorun/screens/audioPlayerModel.dart';
 import 'package:frontend_gorun/screens/basketball_screen.dart';
 import 'package:frontend_gorun/screens/cycling_screen.dart';
@@ -39,6 +38,8 @@ import 'firebase_options.dart';
 import 'screens/forgot_password_screen.dart';
 import 'screens/reset_password_screen.dart';
 import 'screens/signin_screen.dart';
+import 'package:flutter/foundation.dart' as Foundation;
+import 'package:frontend_gorun/screens/Recuperation_Blessure_Screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -68,7 +69,6 @@ void main() async {
   }
 }
 
-
 class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
@@ -78,6 +78,7 @@ class MyApp extends StatelessWidget {
         primarySwatch: Colors.blue,
         fontFamily: 'Roboto', // Utiliser Roboto comme police par défaut
       ),
+      debugShowCheckedModeBanner: false, // Supprime le bandeau de débogage
       initialRoute: '/',
       routes: {
         '/': (context) => SplashScreen(),
@@ -87,13 +88,13 @@ class MyApp extends StatelessWidget {
         '/reset_password': (context) => ResetPasswordScreen(),
         '/validation_code': (context) => ValidationCodeScreen(),
         '/get_started_signin': (context) => GetStartedSigninScreen(
-              userName: '',
-              userImageUrl: '',
-            ),
+          userName: '',
+          userImageUrl: '',
+        ),
         '/get_started_signup': (context) => GetStartedSignupScreen(
-              userName: '',
-              userImageUrl: '',
-            ),
+          userName: '',
+          userImageUrl: '',
+        ),
         '/personalized_journey': (context) => PersonalizedJourney(),
         '/step_one': (context) => Step1(),
         '/step_two': (context) => Step2(),
@@ -124,6 +125,7 @@ class MyApp extends StatelessWidget {
     );
   }
 }
+
 
 class MyAppError extends StatelessWidget {
   final String error;

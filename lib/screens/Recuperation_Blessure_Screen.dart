@@ -30,7 +30,7 @@ class _InjuryTypesScreenState extends State<InjuryTypesScreen> {
     },
     {
       'name': 'Strain',
-      'icon': FontAwesomeIcons.running,  // Icône plus appropriée pour une élongation
+      'icon': FontAwesomeIcons.personRunning,  // Icône plus appropriée pour une élongation
       'description': 'A strain is an injury to a muscle or tendon caused by overstretching.',
     },
     {
