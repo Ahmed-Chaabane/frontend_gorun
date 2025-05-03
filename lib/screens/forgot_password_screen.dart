@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 class ForgotPasswordScreen extends StatefulWidget {
@@ -9,9 +10,10 @@ class ForgotPasswordScreen extends StatefulWidget {
 
 class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   final PageController _pageController = PageController();
+  final TextEditingController _emailController = TextEditingController();
   int _currentPage = 0;
-  bool isPasswordVisible = false;
-  bool isCheckboxChecked = false;
+  bool _isLoading = false;
+  String? _errorMessage;
 
   final List<Map<String, String>> _quotes = [
     {
@@ -30,14 +32,14 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     },
     {
       'text':
-      '“I don\'t think limits. I think you can go as far as your talent and effort can take you. A true champion knows that the limit does not exist. You must aim high, push yourself, and keep going until you’re breaking your own records, rewriting your own history.”',
+      '“I don\'t think limits. I think you can go as far as your talent and effort can take you. A true champion knows that the limit does not exist. You must aim high, push yourself, and keep going until you\'re breaking your own records, rewriting your own history.”',
       'author': 'Usain Bolt',
       'role': 'Olympic Sprinter',
       'image': 'assets/images/legend/bolt.png',
     },
     {
       'text':
-      '“Success is not about how much money you make, but the difference you make in people’s lives. Being a leader is not about being the loudest in the room. It’s about inspiring others, having the courage to lead with integrity, and never giving up on the journey.”',
+      '“Success is not about how much money you make, but the difference you make in people\'s lives. Being a leader is not about being the loudest in the room. It\'s about inspiring others, having the courage to lead with integrity, and never giving up on the journey.”',
       'author': 'Stephen Curry',
       'role': 'Basketball Player',
       'image': 'assets/images/legend/curry.png',
@@ -65,11 +67,57 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     }
   }
 
+  Future<void> _sendPasswordResetEmail() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      await FirebaseAuth.instance.sendPasswordResetEmail(
+        email: _emailController.text.trim(),
+      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Un lien de réinitialisation a été envoyé à votre email'),
+          ),
+        );
+        Navigator.pushNamed(context, '/login_screen');
+      }
+    } on FirebaseAuthException catch (e) {
+      String errorMessage;
+      switch (e.code) {
+        case 'user-not-found':
+          errorMessage = 'Aucun utilisateur trouvé avec cet email';
+          break;
+        case 'invalid-email':
+          errorMessage = 'Adresse email invalide';
+          break;
+        case 'user-disabled':
+          errorMessage = 'Ce compte a été désactivé';
+          break;
+        default:
+          errorMessage = 'Une erreur est survenue: ${e.message}';
+      }
+
+      setState(() {
+        _errorMessage = errorMessage;
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     double screenHeight = MediaQuery.of(context).size.height;
     double quoteSectionHeight = screenHeight * 0.35;
-    double loginFormHeight = screenHeight * 0.65;
 
     return Scaffold(
       body: Container(
@@ -79,15 +127,16 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              const Color(0xFF4DD4DE), // Ocean blue
-              const Color(0xFF0C1A37), // Deeper ocean
-              const Color(0xFF0C1A37), // Deeper ocean
+              const Color(0xFF4DD4DE),
+              const Color(0xFF0C1A37),
+              const Color(0xFF0C1A37),
             ],
           ),
         ),
         child: Column(
           children: [
-            Container(
+            // Section des citations
+            SizedBox(
               height: quoteSectionHeight,
               child: Column(
                 children: [
@@ -116,6 +165,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                 ],
               ),
             ),
+
+            // Section du formulaire
             Expanded(
               child: SingleChildScrollView(
                 child: Container(
@@ -140,8 +191,26 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                       _buildLoginHeader(),
                       const SizedBox(height: 24),
                       _buildEmailField(),
-                      const SizedBox(height: 300),
+                      if (_errorMessage != null)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 8.0),
+                          child: Text(
+                            _errorMessage!,
+                            style: const TextStyle(color: Colors.red),
+                          ),
+                        ),
+                      const SizedBox(height: 320),
                       _buildActionButtons(),
+                      // Bouton de retour ajouté ici
+                      TextButton(
+                        onPressed: () {
+                          Navigator.pushNamed(context, '/login');
+                        },
+                        child: const Text(
+                          'Back to Login',
+                          style: TextStyle(color: Color(0xFF1B85F3), fontSize: 14),
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -153,14 +222,13 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     );
   }
 
-  Widget _buildQuoteCard(
-      String text, String author, String role, String image) {
+  Widget _buildQuoteCard(String text, String author, String role, String image) {
     return Padding(
       padding: const EdgeInsets.all(16.0),
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: Color(0x26202326),
+          color: const Color(0x26202326),
           borderRadius: BorderRadius.circular(20),
         ),
         child: Column(
@@ -168,7 +236,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           children: [
             Text(
               text,
-              style: TextStyle(
+              style: const TextStyle(
                 color: Color(0xFFF7FAFC),
                 fontSize: 14,
                 height: 1.67,
@@ -201,7 +269,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           children: [
             Text(
               author,
-              style: TextStyle(
+              style: const TextStyle(
                 color: Colors.white,
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
@@ -209,7 +277,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             ),
             Text(
               role,
-              style: TextStyle(
+              style: const TextStyle(
                 color: Color(0xFFC6CED9),
                 fontSize: 12,
               ),
@@ -241,18 +309,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     );
   }
 
-  Widget _buildLoginForm() {
-    return Column(
-      children: [
-        _buildLoginHeader(),
-        const SizedBox(height: 24),
-        _buildEmailField(),
-        const SizedBox(height: 20), // Adjusted size to avoid hardcoding
-        _buildActionButtons(),
-      ],
-    );
-  }
-
   Widget _buildLoginHeader() {
     return Column(
       children: [
@@ -266,7 +322,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         ),
         const SizedBox(height: 10),
         Text(
-          'Don’t worry! It’s happens. Please enter the email address associated with your account.',
+          'Don\'t worry! It happens. Please enter your email to receive a reset link.',
           style: TextStyle(
             color: Color(0xFF808B9A),
             fontSize: 14,
@@ -277,24 +333,44 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   }
 
   Widget _buildEmailField() {
-    return SizedBox(
-      height: 80,
-      child: TextField(
-        decoration: InputDecoration(
-          labelText: 'Insert email address',
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(14),
-            borderSide: BorderSide(color: Color(0xFFD1E6FF)),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(14),
-            borderSide: BorderSide(color: Color(0xFF1B85F3)),
-          ),
-          filled: true,
-          fillColor: Colors.white,
-          contentPadding: EdgeInsets.symmetric(horizontal: 16),
+    return TextField(
+      controller: _emailController,
+      keyboardType: TextInputType.emailAddress,
+      decoration: InputDecoration(
+        labelText: 'Email',
+        labelStyle: const TextStyle(
+          color: Color(0xFF808B9A),
+          fontSize: 16,
         ),
+        hintText: 'your@email.com',
+        hintStyle: TextStyle(color: Colors.grey[400]),
+        prefixIcon: const Icon(Icons.email_outlined, color: Color(0xFF0C1A37)),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(
+            color: Color(0xFFE2E8F0),
+            width: 1.5,
+          ),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(
+            color: Color(0xFFE2E8F0),
+            width: 1.5,
+          ),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(
+            color: Color(0xFF1B85F3),
+            width: 2.0,
+          ),
+        ),
+        filled: true,
+        fillColor: Colors.white,
+        contentPadding: const EdgeInsets.symmetric(vertical: 18, horizontal: 16),
       ),
+      style: const TextStyle(color: Color(0xFF39434F), fontSize: 16),
     );
   }
 
@@ -305,18 +381,18 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           width: double.infinity,
           height: 60,
           child: ElevatedButton(
-            onPressed: () {
-              Navigator.of(context).pushReplacementNamed('/validation_code');
-            },
+            onPressed: _isLoading ? null : _sendPasswordResetEmail,
             style: ElevatedButton.styleFrom(
               backgroundColor: Color(0xFF162A5A),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(14),
               ),
             ),
-            child: const Text(
-              'Submit',
-              style: TextStyle(color: Colors.white, fontSize: 14),
+            child: _isLoading
+                ? const CircularProgressIndicator(color: Colors.white)
+                : const Text(
+              'Send Reset Link',
+              style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w500),
             ),
           ),
         ),

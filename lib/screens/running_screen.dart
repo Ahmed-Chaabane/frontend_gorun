@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:ui';
 import 'package:confetti/confetti.dart';
 import 'package:flutter/material.dart';
@@ -6,6 +7,8 @@ import 'package:geolocator/geolocator.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:intl/intl.dart';
+import 'package:http/http.dart' as http;
+import 'package:firebase_auth/firebase_auth.dart';
 
 // Constants for reusability
 class AppConstants {
@@ -14,7 +17,6 @@ class AppConstants {
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
-
   static const kDefaultPadding =
   EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0);
   static const kCardMargin = EdgeInsets.symmetric(horizontal: 8, vertical: 8);
@@ -26,7 +28,6 @@ class Habit {
   final String title;
   final String value;
   final IconData icon;
-
   Habit({
     required this.title,
     required this.value,
@@ -41,7 +42,6 @@ class LocationService {
     if (!serviceEnabled) {
       throw Exception('Location services are disabled.');
     }
-
     LocationPermission permission = await Geolocator.checkPermission();
     if (permission == LocationPermission.denied) {
       permission = await Geolocator.requestPermission();
@@ -49,7 +49,6 @@ class LocationService {
         throw Exception('Location permissions are permanently denied.');
       }
     }
-
     Position position = await Geolocator.getCurrentPosition();
     return LatLng(position.latitude, position.longitude);
   }
@@ -70,10 +69,8 @@ class _RunningTrackerState extends State<RunningTracker>
   // Variables pour gérer l'état de l'activité
   bool _isStarted = false;
   bool _isPaused = false;
-
   final ConfettiController _confettiController = ConfettiController(
       duration: const Duration(seconds: 1)); // Pour les confettis
-
   int _sessions = 0;
   int _totalDuration = 0; // en secondes
   double _distance = 0.0; // en kilomètres
@@ -87,11 +84,13 @@ class _RunningTrackerState extends State<RunningTracker>
   LatLng _currentPosition = const LatLng(0, 0);
   bool _isLoading = true;
   List<LatLng> _polylinePoints = [];
-
   late PageController _pageController;
   int currentPage = 0;
-
   List<Habit> habits = [];
+
+  // Variables pour Firebase et utilisateur
+  String? firebaseUid;
+  int? utilisateurId;
 
   @override
   void initState() {
@@ -99,6 +98,7 @@ class _RunningTrackerState extends State<RunningTracker>
     _pageController = PageController(viewportFraction: 0.8);
     _initializeHabits(); // Initialisation des habitudes
     _initializeLocation(); // Initialisation de la position
+    _fetchUserData(); // Récupérer les données utilisateur
   }
 
   @override
@@ -112,23 +112,79 @@ class _RunningTrackerState extends State<RunningTracker>
   void _initializeHabits() {
     habits = [
       Habit(title: 'Sessions', value: '$_sessions', icon: Icons.directions_run),
-      Habit(title: 'Distance', value: '${_distance.toStringAsFixed(2)} km', icon: Icons.map),
-      Habit(title: 'Durée totale', value: '${_formatTime(_totalDuration)}', icon: Icons.timer),
-      Habit(title: 'Calories', value: '$_caloriesBurned kcal', icon: Icons.local_fire_department),
-      Habit(title: 'Heart Rate', value: '$_heartRate bpm', icon: Icons.favorite), // Nouvelle statistique
+      Habit(
+          title: 'Distance',
+          value: '${_distance.toStringAsFixed(2)} km',
+          icon: Icons.map),
+      Habit(
+          title: 'Durée totale',
+          value: '${_formatTime(_totalDuration)}',
+          icon: Icons.timer),
+      Habit(
+          title: 'Calories',
+          value: '$_caloriesBurned kcal',
+          icon: Icons.local_fire_department),
+      Habit(
+          title: 'Heart Rate',
+          value: '$_heartRate bpm',
+          icon: Icons.favorite), // Nouvelle statistique
     ];
   }
 
+  // Modifiez votre méthode _initializeLocation() comme suit :
   Future<void> _initializeLocation() async {
     try {
       _currentPosition = await LocationService().getCurrentLocation();
       setState(() => _isLoading = false);
 
+      // Attendez que le contrôleur soit disponible
       final GoogleMapController controller = await _mapController.future;
-      controller.animateCamera(CameraUpdate.newLatLngZoom(_currentPosition, 15));
+
+      // Vérifiez que le widget est toujours monté
+      if (!mounted) return;
+
+      controller.animateCamera(
+        CameraUpdate.newLatLngZoom(_currentPosition, 15),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Erreur de localisation: ${e.toString()}")),
+      );
+    }
+  }
+
+
+  Future<void> _fetchUserData() async {
+    final User? user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Utilisateur non connecté.')),
+      );
+      return;
+    }
+
+    setState(() {
+      firebaseUid = user.uid; // Récupérer le firebase_uid
+    });
+
+    try {
+      // Récupérer l'id_utilisateur depuis le backend
+      final response = await http.get(
+        Uri.parse('http://localhost:3000/api/utilisateur/firebase_uid/$firebaseUid'),
+      );
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> userData = jsonDecode(response.body);
+        setState(() {
+          utilisateurId = userData['id_utilisateur']; // Récupérer l'id_utilisateur
+        });
+      } else {
+        throw Exception('Erreur lors de la récupération des données utilisateur');
+      }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString())),
+        SnackBar(content: Text('Erreur lors de la récupération des données utilisateur : $e')),
       );
     }
   }
@@ -148,12 +204,20 @@ class _RunningTrackerState extends State<RunningTracker>
 
   void _stopActivity() {
     if (_secondsElapsed > 0) {
+      // Vérifiez s'il y a des points avant de sauvegarder
+      if (_polylinePoints.isNotEmpty) {
+        _saveActivity();
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Aucun trajet GPS enregistré")),
+        );
+      }
       setState(() {
         _isStarted = false;
         _isPaused = false;
         _stopTracking();
         _showSummary();
-        _resetActivity(); // Réinitialiser le compteur après affichage du résumé
+        _resetActivity();
       });
     }
   }
@@ -178,9 +242,7 @@ class _RunningTrackerState extends State<RunningTracker>
         _totalDuration++;
       });
     });
-
     _startHeartRateSimulation(); // Démarrer la simulation de la fréquence cardiaque
-
     LocationService().getPositionStream().listen((Position position) async {
       setState(() {
         LatLng newPosition = LatLng(position.latitude, position.longitude);
@@ -188,7 +250,6 @@ class _RunningTrackerState extends State<RunningTracker>
         _updateDistance();
         _currentPosition = newPosition;
       });
-
       final GoogleMapController controller = await _mapController.future;
       controller.animateCamera(CameraUpdate.newLatLng(_currentPosition));
     });
@@ -212,7 +273,10 @@ class _RunningTrackerState extends State<RunningTracker>
       }
       setState(() {
         _distance = totalDistance / 1000; // Convertir en kilomètres
-        habits[1] = Habit(title: 'Distance', value: '${_distance.toStringAsFixed(2)} km', icon: Icons.map);
+        habits[1] = Habit(
+            title: 'Distance',
+            value: '${_distance.toStringAsFixed(2)} km',
+            icon: Icons.map);
       });
     }
   }
@@ -221,14 +285,71 @@ class _RunningTrackerState extends State<RunningTracker>
     Timer.periodic(const Duration(seconds: 5), (timer) {
       setState(() {
         _heartRate = 60 + (_secondsElapsed % 40); // Simulation aléatoire entre 60 et 100 bpm
-        habits[4] = Habit(title: 'Heart Rate', value: '$_heartRate bpm', icon: Icons.favorite);
+        habits[4] = Habit(
+            title: 'Heart Rate',
+            value: '$_heartRate bpm',
+            icon: Icons.favorite);
       });
     });
   }
 
+  Future<void> _saveActivity() async {
+    if (firebaseUid == null || utilisateurId == null) {
+      print("Erreur : Données utilisateur manquantes");
+      return;
+    }
+
+    if (_polylinePoints.isEmpty) {
+      print("Aucun trajet enregistré");
+      return;
+    }
+
+    final activityData = {
+      "type_activite": "running",
+      "date_activite": DateFormat('yyyy-MM-dd').format(DateTime.now()),
+      "duree": _secondsElapsed ~/ 60, // en minutes
+      "duree_secondes": _secondsElapsed,
+      "distance": _distance, // Notez le nom du champ différent
+      "calories_brulees": _caloriesBurned,
+      "latitude_debut": _polylinePoints.first.latitude,
+      "longitude_debut": _polylinePoints.first.longitude,
+      "latitude_fin": _polylinePoints.last.latitude,
+      "longitude_fin": _polylinePoints.last.longitude,
+      "id_utilisateur": utilisateurId,
+      "id_objectif_sportif": 2, // À adapter ou rendre dynamique
+      "details_raw": "Session running via l'application mobile",
+      "date_heure": DateTime.now().toUtc().toIso8601String(),
+      "i_client": utilisateurId.toString(),
+      "firebase_uid": firebaseUid!,
+    };
+
+    print("Envoi des données: ${jsonEncode(activityData)}");
+
+    try {
+      final response = await http.post(
+        Uri.parse('http://localhost:3000/api/activitesportive'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(activityData),
+      );
+
+      if (response.statusCode == 201) {
+        print("Activité sauvegardée avec succès!");
+      } else {
+        print("Erreur du serveur: ${response.body}");
+        throw Exception('Échec de la sauvegarde: ${response.statusCode}');
+      }
+    } catch (e) {
+      print("Erreur réseau: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Erreur de sauvegarde: ${e.toString()}")),
+      );
+    }
+  }
+
+
+
   void _showSummary() {
     _confettiController.play(); // Jouer les confettis
-
     showDialog(
       context: context,
       builder: (context) {
@@ -262,11 +383,16 @@ class _RunningTrackerState extends State<RunningTracker>
                       ),
                     ),
                     const SizedBox(height: 16),
-                    _buildSummaryRow(Icons.directions_run, 'Sessions', '$_sessions', Colors.purple),
-                    _buildSummaryRow(Icons.map, 'Distance', '${_distance.toStringAsFixed(2)} km', Colors.yellow),
-                    _buildSummaryRow(Icons.timer, 'Durée totale', '${_formatTime(_totalDuration)}', Colors.green),
-                    _buildSummaryRow(Icons.local_fire_department, 'Calories', '$_caloriesBurned kcal', Colors.blue),
-                    _buildSummaryRow(Icons.favorite, 'Heart Rate', '$_heartRate bpm', Colors.red), // Nouvelle ligne
+                    _buildSummaryRow(Icons.directions_run, 'Sessions',
+                        '$_sessions', Colors.purple),
+                    _buildSummaryRow(Icons.map, 'Distance',
+                        '${_distance.toStringAsFixed(2)} km', Colors.yellow),
+                    _buildSummaryRow(Icons.timer, 'Durée totale',
+                        '${_formatTime(_totalDuration)}', Colors.green),
+                    _buildSummaryRow(Icons.local_fire_department, 'Calories',
+                        '$_caloriesBurned kcal', Colors.blue),
+                    _buildSummaryRow(Icons.favorite, 'Heart Rate',
+                        '$_heartRate bpm', Colors.red), // Nouvelle ligne
                   ],
                 ),
               ),
@@ -277,7 +403,8 @@ class _RunningTrackerState extends State<RunningTracker>
     );
   }
 
-  Widget _buildSummaryRow(IconData icon, String title, String value, Color iconColor) {
+  Widget _buildSummaryRow(
+      IconData icon, String title, String value, Color iconColor) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
@@ -362,7 +489,8 @@ class _RunningTrackerState extends State<RunningTracker>
           SizedBox(height: 16),
           FloatingActionButton(
             heroTag: 'uniqueTagForBEBEBE',
-            onPressed: _secondsElapsed > 0 ? _stopActivity : null, // Désactiver si le compteur est à 00:00
+            onPressed:
+            _secondsElapsed > 0 ? _stopActivity : null, // Désactiver si le compteur est à 00:00
             backgroundColor: Color(0xFF0C1A37),
             child: Icon(Icons.stop, size: 30, color: Colors.white),
           ),
@@ -384,6 +512,7 @@ class _RunningTrackerState extends State<RunningTracker>
       ),
     );
   }
+
   // Fonction pour construire la section supérieure
   Widget _buildTopSection() {
     return Padding(
@@ -391,8 +520,10 @@ class _RunningTrackerState extends State<RunningTracker>
       child: Row(
         children: [
           IconButton(
-            icon: const Icon(Icons.arrow_back, color: Color(0xFF808B9A), size: 24),
-            onPressed: () => Navigator.of(context).pushReplacementNamed('/home_screen'),
+            icon: const Icon(Icons.arrow_back,
+                color: Color(0xFF808B9A), size: 24),
+            onPressed: () =>
+                Navigator.of(context).pushReplacementNamed('/home_screen'),
           ),
           const SizedBox(width: 8),
           const Spacer(),
@@ -414,16 +545,19 @@ class _RunningTrackerState extends State<RunningTracker>
     );
   }
 
+  // Et dans votre build(), ajoutez une vérification :
   Widget _buildMapSection() {
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(14),
-        child: Container(
+        child: SizedBox(
           height: 400,
-          child: _isLoading
-              ? const Center(child: CircularProgressIndicator())
-              : GoogleMap(
+          child: GoogleMap(
             initialCameraPosition: CameraPosition(
               target: _currentPosition,
               zoom: 15.0,
@@ -443,7 +577,12 @@ class _RunningTrackerState extends State<RunningTracker>
                 width: 5,
               ),
             },
-            onMapCreated: (controller) => _mapController.complete(controller),
+            onMapCreated: (controller) {
+              if (!_mapController.isCompleted) {
+                _mapController.complete(controller);
+              }
+            },
+            myLocationEnabled: true,
           ),
         ),
       ),
@@ -475,7 +614,8 @@ class _RunningTrackerState extends State<RunningTracker>
                     duration: const Duration(milliseconds: 300),
                     curve: Curves.easeInOut,
                   );
-                } else if (details.delta.dx < -5 && currentPage < habits.length - 1) {
+                } else if (details.delta.dx < -5 &&
+                    currentPage < habits.length - 1) {
                   _pageController.animateToPage(
                     currentPage + 1,
                     duration: const Duration(milliseconds: 300),
@@ -492,7 +632,10 @@ class _RunningTrackerState extends State<RunningTracker>
                   final double offset = (index - currentPage) * 0.5; // Parallax effect
                   return Transform.translate(
                     offset: Offset(offset, 0),
-                    child: _buildBenefitCard(habits[index].title, habits[index].value, habits[index].icon),
+                    child: _buildBenefitCard(
+                        habits[index].title,
+                        habits[index].value,
+                        habits[index].icon),
                   );
                 },
               ),
@@ -515,7 +658,7 @@ class _RunningTrackerState extends State<RunningTracker>
 
   Widget _buildBenefitCard(String title, String value, IconData icon) {
     return GestureDetector(
-      onTap: () {}, // Add an action if necessary
+      onTap: () {}, // Ajoutez une action si nécessaire
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 300),
         margin: AppConstants.kCardMargin,
@@ -549,9 +692,10 @@ class _RunningTrackerState extends State<RunningTracker>
               child: Text(
                 title,
                 style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white),
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
                 textAlign: TextAlign.center,
               ),
             ),
@@ -572,7 +716,6 @@ class _RunningTrackerState extends State<RunningTracker>
 class SportyCounter extends StatelessWidget {
   final String time;
   final double fontSize;
-
   const SportyCounter({required this.time, this.fontSize = 48.0, Key? key})
       : super(key: key);
 

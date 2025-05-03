@@ -39,13 +39,13 @@ class GetStartedSigninScreen extends StatelessWidget {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        // Utilizes Image.network with fallback image in case of error
+        // Utilise un cercle avatar avec gestion d'erreur et image par défaut
         CircleAvatar(
-          radius: 100 * scaleFactor, // Scales the avatar size
-          backgroundImage: NetworkImage(userImageUrl),
-          onBackgroundImageError: (error, stackTrace) {
-            // Fallback image in case of error
-          },
+          radius: 100 * scaleFactor,
+          backgroundColor: Colors.white, // Couleur de fond si l'image est vide
+          child: ClipOval(
+            child: _buildProfileImage(),
+          ),
         ),
         SizedBox(height: 16 * scaleFactor),
         Text(
@@ -57,7 +57,7 @@ class GetStartedSigninScreen extends StatelessWidget {
         ),
         SizedBox(height: 16 * scaleFactor),
         const Text(
-          "Welcome back! We\'re excited to see you again.\n Keep going, you\'re doing great!",
+          "Welcome back! We're excited to see you again.\n Keep going, you're doing great!",
           textAlign: TextAlign.center,
           style: TextStyle(
             color: Color(0xFF808B9A),
@@ -66,6 +66,46 @@ class GetStartedSigninScreen extends StatelessWidget {
         ),
       ],
     );
+  }
+
+  Widget _buildProfileImage() {
+    if (userImageUrl.isEmpty) {
+      // Si pas d'URL d'image, utiliser l'image par défaut
+      return Image.asset(
+        'assets/icons/sportsman.png',
+        width: 300,
+        height: 300,
+        fit: BoxFit.cover,
+      );
+    } else {
+      // Si URL d'image existe, essayer de la charger
+      return Image.network(
+        userImageUrl,
+        width: 200,
+        height: 200,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) {
+          // En cas d'erreur de chargement, utiliser l'image par défaut
+          return Image.asset(
+            'assets/icons/sportsman.png',
+            width: 200,
+            height: 200,
+            fit: BoxFit.cover,
+          );
+        },
+        loadingBuilder: (context, child, loadingProgress) {
+          if (loadingProgress == null) return child;
+          return Center(
+            child: CircularProgressIndicator(
+              value: loadingProgress.expectedTotalBytes != null
+                  ? loadingProgress.cumulativeBytesLoaded /
+                  loadingProgress.expectedTotalBytes!
+                  : null,
+            ),
+          );
+        },
+      );
+    }
   }
 
   Widget _buildActionButtons(BuildContext context, double scaleFactor) {
@@ -88,7 +128,7 @@ class GetStartedSigninScreen extends StatelessWidget {
             'Get Started',
             style: TextStyle(
               color: Colors.white,
-              fontSize: 14, // Scales the text size
+              fontSize: 16, // Scales the text size
             ),
           ),
         ),

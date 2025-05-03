@@ -1,27 +1,26 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:ui';
 import 'package:confetti/confetti.dart';
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:intl/intl.dart';
+import 'package:http/http.dart' as http;
 
-// Constants for reusability
 class AppConstants {
   static const kPrimaryGradient = LinearGradient(
     colors: [Color(0xFF4DD4DE), Color(0xFF0C1A37)],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
-
-  static const kDefaultPadding =
-  EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0);
+  static const kDefaultPadding = EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0);
   static const kCardMargin = EdgeInsets.symmetric(horizontal: 8, vertical: 8);
   static const kCardBorderRadius = BorderRadius.all(Radius.circular(15));
 }
 
-// Habit Model
 class Habit {
   final String title;
   final String value;
@@ -34,7 +33,6 @@ class Habit {
   });
 }
 
-// Location Service
 class LocationService {
   Future<LatLng> getCurrentLocation() async {
     bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
@@ -59,47 +57,42 @@ class LocationService {
   }
 }
 
-// Main Widget
 class CyclingTracker extends StatefulWidget {
   @override
   _CyclingTrackerState createState() => _CyclingTrackerState();
 }
 
-class _CyclingTrackerState extends State<CyclingTracker>
-    with TickerProviderStateMixin {
-  // Variables pour gérer l'état de l'activité
+class _CyclingTrackerState extends State<CyclingTracker> with TickerProviderStateMixin {
   bool _isStarted = false;
   bool _isPaused = false;
-
-  final ConfettiController _confettiController = ConfettiController(
-      duration: const Duration(seconds: 1)); // Pour les confettis
-
+  final ConfettiController _confettiController = ConfettiController(duration: const Duration(seconds: 1));
   int _sessions = 0;
-  int _totalDuration = 0; // en secondes
-  double _distance = 0.0; // en kilomètres
+  int _totalDuration = 0;
+  double _distance = 0.0;
   int _caloriesBurned = 0;
-  int _heartRate = 0; // Fréquence cardiaque en bpm
-  double _speed = 0.0; // Vitesse en km/h
+  int _heartRate = 0;
+  double _speed = 0.0;
   Timer? _timer;
   int _secondsElapsed = 0;
 
-  // Carte Google Maps
   final Completer<GoogleMapController> _mapController = Completer();
   LatLng _currentPosition = const LatLng(0, 0);
   bool _isLoading = true;
   List<LatLng> _polylinePoints = [];
-
   late PageController _pageController;
   int currentPage = 0;
-
   List<Habit> habits = [];
+
+  String? firebaseUid;
+  int? utilisateurId;
 
   @override
   void initState() {
     super.initState();
     _pageController = PageController(viewportFraction: 0.8);
-    _initializeHabits(); // Initialisation des habitudes
-    _initializeLocation(); // Initialisation de la position
+    _initializeHabits();
+    _initializeLocation();
+    _fetchUserData();
   }
 
   @override
@@ -130,7 +123,36 @@ class _CyclingTrackerState extends State<CyclingTracker>
       controller.animateCamera(CameraUpdate.newLatLngZoom(_currentPosition, 15));
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString())),
+        SnackBar(content: Text("Erreur de localisation: ${e.toString()}")),
+      );
+    }
+  }
+
+  Future<void> _fetchUserData() async {
+    final User? user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Utilisateur non connecté.')),
+      );
+      return;
+    }
+
+    setState(() => firebaseUid = user.uid);
+
+    try {
+      final response = await http.get(
+        Uri.parse('http://localhost:3000/api/utilisateur/firebase_uid/$firebaseUid'),
+      );
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> userData = jsonDecode(response.body);
+        setState(() => utilisateurId = userData['id_utilisateur']);
+      } else {
+        throw Exception('Erreur lors de la récupération des données utilisateur');
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erreur: $e')),
       );
     }
   }
@@ -150,12 +172,19 @@ class _CyclingTrackerState extends State<CyclingTracker>
 
   void _stopActivity() {
     if (_secondsElapsed > 0) {
+      if (_polylinePoints.isNotEmpty) {
+        _saveActivity();
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Aucun trajet GPS enregistré")),
+        );
+      }
       setState(() {
         _isStarted = false;
         _isPaused = false;
         _stopTracking();
         _showSummary();
-        _resetActivity(); // Réinitialiser le compteur après affichage du résumé
+        _resetActivity();
       });
     }
   }
@@ -182,7 +211,7 @@ class _CyclingTrackerState extends State<CyclingTracker>
       });
     });
 
-    _startHeartRateSimulation(); // Démarrer la simulation de la fréquence cardiaque
+    _startHeartRateSimulation();
 
     LocationService().getPositionStream().listen((Position position) async {
       setState(() {
@@ -207,15 +236,16 @@ class _CyclingTrackerState extends State<CyclingTracker>
       double totalDistance = 0.0;
       for (int i = 1; i < _polylinePoints.length; i++) {
         totalDistance += Geolocator.distanceBetween(
-          _polylinePoints[i - 1].latitude,
-          _polylinePoints[i - 1].longitude,
+          _polylinePoints[i-1].latitude,
+          _polylinePoints[i-1].longitude,
           _polylinePoints[i].latitude,
           _polylinePoints[i].longitude,
         );
       }
+
       setState(() {
-        _distance = totalDistance / 1000; // Convertir en kilomètres
-        _speed = _distance / (_secondsElapsed / 3600); // Calculer la vitesse en km/h
+        _distance = totalDistance / 1000;
+        _speed = _distance / (_secondsElapsed / 3600);
         habits[1] = Habit(title: 'Distance', value: '${_distance.toStringAsFixed(2)} km', icon: Icons.map);
         habits[5] = Habit(title: 'Speed', value: '${_speed.toStringAsFixed(2)} km/h', icon: Icons.speed);
       });
@@ -225,76 +255,94 @@ class _CyclingTrackerState extends State<CyclingTracker>
   void _startHeartRateSimulation() {
     Timer.periodic(const Duration(seconds: 5), (timer) {
       setState(() {
-        _heartRate = 60 + (_secondsElapsed % 40); // Simulation aléatoire entre 60 et 100 bpm
+        _heartRate = 60 + (_secondsElapsed % 40);
         habits[4] = Habit(title: 'Heart Rate', value: '$_heartRate bpm', icon: Icons.favorite);
       });
     });
   }
 
+  Future<void> _saveActivity() async {
+    if (firebaseUid == null || utilisateurId == null) return;
+
+    final activityData = {
+      "type_activite": "cycling",
+      "date_activite": DateFormat('yyyy-MM-dd').format(DateTime.now()),
+      "duree": _secondsElapsed ~/ 60,
+      "duree_secondes": _secondsElapsed,
+      "distance": _distance,
+      "calories_brulees": _caloriesBurned,
+      "latitude_debut": _polylinePoints.first.latitude,
+      "longitude_debut": _polylinePoints.first.longitude,
+      "latitude_fin": _polylinePoints.last.latitude,
+      "longitude_fin": _polylinePoints.last.longitude,
+      "id_utilisateur": utilisateurId,
+      "id_objectif_sportif": 2,
+      "details_raw": "Session cycling via l'application mobile",
+      "date_heure": DateTime.now().toUtc().toIso8601String(),
+      "i_client": utilisateurId.toString(),
+      "firebase_uid": firebaseUid!,
+    };
+
+    try {
+      final response = await http.post(
+        Uri.parse('http://localhost:3000/api/activitesportive'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(activityData),
+      );
+
+      if (response.statusCode != 201) {
+        throw Exception('Échec de la sauvegarde: ${response.statusCode}');
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Erreur de sauvegarde: ${e.toString()}")),
+      );
+    }
+  }
+
   void _showSummary() {
-    _confettiController.play(); // Jouer les confettis
+    _confettiController.play();
 
     showDialog(
       context: context,
-      builder: (context) {
-        return Dialog(
-          backgroundColor: Colors.transparent, // Fond transparent
-          insetPadding: EdgeInsets.all(20),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(20),
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10), // Effet de flou
-              child: Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.7), // Fond semi-transparent
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(
-                    color: Colors.white.withOpacity(0.2),
-                    width: 1,
-                  ),
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Résumé de la Séance',
-                      style: GoogleFonts.bebasNeue(
-                        fontSize: 28,
-                        color: Colors.black87, // Texte doux (gris foncé)
-                        fontWeight: FontWeight.normal, // Pas de gras
-                      ),
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: EdgeInsets.all(20),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(20),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+            child: Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.7),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: Colors.white.withOpacity(0.2), width: 1),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Résumé de la Séance',
+                    style: GoogleFonts.bebasNeue(
+                      fontSize: 28,
+                      color: Colors.black87,
+                      fontWeight: FontWeight.normal,
                     ),
-                    const SizedBox(height: 16),
-                    _buildSummaryRow(Icons.directions_bike, 'Sessions', '$_sessions', Colors.purple),
-                    _buildSummaryRow(Icons.map, 'Distance', '${_distance.toStringAsFixed(2)} km', Colors.yellow),
-                    _buildSummaryRow(Icons.timer, 'Durée totale', '${_formatTime(_totalDuration)}', Colors.green),
-                    _buildSummaryRow(Icons.local_fire_department, 'Calories', '$_caloriesBurned kcal', Colors.blue),
-                    _buildSummaryRow(Icons.favorite, 'Heart Rate', '$_heartRate bpm', Colors.red),
-                    _buildSummaryRow(Icons.speed, 'Speed', '${_speed.toStringAsFixed(2)} km/h', Colors.orange),
-                  ],
-                ),
+                  ),
+                  const SizedBox(height: 16),
+                  _buildSummaryRow(Icons.directions_bike, 'Sessions', '$_sessions', Colors.purple),
+                  _buildSummaryRow(Icons.map, 'Distance', '${_distance.toStringAsFixed(2)} km', Colors.yellow),
+                  _buildSummaryRow(Icons.timer, 'Durée totale', '${_formatTime(_totalDuration)}', Colors.green),
+                  _buildSummaryRow(Icons.local_fire_department, 'Calories', '$_caloriesBurned kcal', Colors.blue),
+                  _buildSummaryRow(Icons.favorite, 'Heart Rate', '$_heartRate bpm', Colors.red),
+                  _buildSummaryRow(Icons.speed, 'Speed', '${_speed.toStringAsFixed(2)} km/h', Colors.orange),
+                ],
               ),
             ),
           ),
-        );
-      },
-    );
-  }
-  // Fonction pour construire la section supérieure
-  Widget _buildTopSection() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 20),
-      child: Row(
-        children: [
-          IconButton(
-            icon: const Icon(Icons.arrow_back, color: Color(0xFF808B9A), size: 24),
-            onPressed: () => Navigator.of(context).pushReplacementNamed('/home_screen'),
-          ),
-          const SizedBox(width: 8),
-          const Spacer(),
-        ],
+        ),
       ),
     );
   }
@@ -304,14 +352,14 @@ class _CyclingTrackerState extends State<CyclingTracker>
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
         children: [
-          Icon(icon, color: iconColor, size: 28), // Icône colorée
+          Icon(icon, color: iconColor, size: 28),
           const SizedBox(width: 16),
           Text(
             title,
             style: GoogleFonts.bebasNeue(
               fontSize: 20,
-              color: Colors.black87, // Texte doux (gris foncé)
-              fontWeight: FontWeight.normal, // Pas de gras
+              color: Colors.black87,
+              fontWeight: FontWeight.normal,
             ),
           ),
           const Spacer(),
@@ -319,8 +367,8 @@ class _CyclingTrackerState extends State<CyclingTracker>
             value,
             style: GoogleFonts.bebasNeue(
               fontSize: 20,
-              color: Colors.black87, // Texte doux (gris foncé)
-              fontWeight: FontWeight.normal, // Pas de gras
+              color: Colors.black87,
+              fontWeight: FontWeight.normal,
             ),
           ),
         ],
@@ -348,8 +396,8 @@ class _CyclingTrackerState extends State<CyclingTracker>
               _buildTopSection(),
               _buildMainTitle(),
               _buildDateText(),
-              _buildMapSection(), // Carte Google Maps
-              _buildHabitsSection(), // Cartes des statistiques
+              _buildMapSection(),
+              _buildHabitsSection(),
             ],
           ),
           Align(
@@ -358,12 +406,7 @@ class _CyclingTrackerState extends State<CyclingTracker>
               confettiController: _confettiController,
               blastDirectionality: BlastDirectionality.explosive,
               shouldLoop: false,
-              colors: const [
-                Colors.blue,
-                Colors.green,
-                Colors.red,
-                Colors.yellow
-              ],
+              colors: const [Colors.blue, Colors.green, Colors.red, Colors.yellow],
             ),
           ),
         ],
@@ -372,7 +415,7 @@ class _CyclingTrackerState extends State<CyclingTracker>
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
           FloatingActionButton(
-            heroTag: 'uniqueTagForBEBEBEeazeza',
+            heroTag: 'cyclingStart',
             onPressed: _startActivity,
             backgroundColor: Color(0xFF0C1A37),
             child: Icon(
@@ -383,11 +426,27 @@ class _CyclingTrackerState extends State<CyclingTracker>
           ),
           SizedBox(height: 16),
           FloatingActionButton(
-            heroTag: 'uniqueTagForAZQWS',
-            onPressed: _secondsElapsed > 0 ? _stopActivity : null, // Désactiver si le compteur est à 00:00
+            heroTag: 'cyclingStop',
+            onPressed: _secondsElapsed > 0 ? _stopActivity : null,
             backgroundColor: Color(0xFF0C1A37),
             child: Icon(Icons.stop, size: 30, color: Colors.white),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTopSection() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 20),
+      child: Row(
+        children: [
+          IconButton(
+            icon: const Icon(Icons.arrow_back, color: Color(0xFF808B9A), size: 24),
+            onPressed: () => Navigator.of(context).pushReplacementNamed('/home_screen'),
+          ),
+          const SizedBox(width: 8),
+          const Spacer(),
         ],
       ),
     );
@@ -401,7 +460,7 @@ class _CyclingTrackerState extends State<CyclingTracker>
         style: GoogleFonts.bebasNeue(
           fontSize: 32,
           fontWeight: FontWeight.bold,
-          color: Colors.black, // Titre en noir
+          color: Colors.black,
         ),
       ),
     );
@@ -425,7 +484,7 @@ class _CyclingTrackerState extends State<CyclingTracker>
       margin: const EdgeInsets.symmetric(horizontal: 16),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(14),
-        child: Container(
+        child: SizedBox(
           height: 400,
           child: _isLoading
               ? const Center(child: CircularProgressIndicator())
@@ -467,7 +526,7 @@ class _CyclingTrackerState extends State<CyclingTracker>
             style: GoogleFonts.bebasNeue(
               fontSize: 24,
               fontWeight: FontWeight.bold,
-              color: Colors.black, // Titre en noir
+              color: Colors.black,
             ),
           ),
           const SizedBox(height: 16),
@@ -495,10 +554,11 @@ class _CyclingTrackerState extends State<CyclingTracker>
                 onPageChanged: (index) => setState(() => currentPage = index),
                 itemCount: habits.length,
                 itemBuilder: (context, index) {
-                  final double offset = (index - currentPage) * 0.5; // Parallax effect
+                  final double offset = (index - currentPage) * 0.5;
                   return Transform.translate(
                     offset: Offset(offset, 0),
-                    child: _buildBenefitCard(habits[index].title, habits[index].value, habits[index].icon),
+                    child: _buildBenefitCard(
+                        habits[index].title, habits[index].value, habits[index].icon),
                   );
                 },
               ),
@@ -507,7 +567,7 @@ class _CyclingTrackerState extends State<CyclingTracker>
           const SizedBox(height: 16),
           Center(
             child: SizedBox(
-              width: 300, // Ajustez cette valeur selon vos besoins
+              width: 300,
               child: SportyCounter(
                 time: '${_formatTime(_secondsElapsed)}',
                 fontSize: 96.0,
@@ -521,7 +581,7 @@ class _CyclingTrackerState extends State<CyclingTracker>
 
   Widget _buildBenefitCard(String title, String value, IconData icon) {
     return GestureDetector(
-      onTap: () {}, // Add an action if necessary
+      onTap: () {},
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 300),
         margin: AppConstants.kCardMargin,
@@ -555,9 +615,10 @@ class _CyclingTrackerState extends State<CyclingTracker>
               child: Text(
                 title,
                 style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white),
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
                 textAlign: TextAlign.center,
               ),
             ),
@@ -574,7 +635,6 @@ class _CyclingTrackerState extends State<CyclingTracker>
   }
 }
 
-// Compteur sportif
 class SportyCounter extends StatelessWidget {
   final String time;
   final double fontSize;
@@ -587,7 +647,7 @@ class SportyCounter extends StatelessWidget {
     return ShaderMask(
       shaderCallback: (Rect bounds) {
         return LinearGradient(
-          colors: [Color(0xFF4DD4DE), Color(0xFF0C1A37)], // Dégradé sportif
+          colors: [Color(0xFF4DD4DE), Color(0xFF0C1A37)],
           begin: Alignment.center,
           end: Alignment.bottomRight,
         ).createShader(bounds);

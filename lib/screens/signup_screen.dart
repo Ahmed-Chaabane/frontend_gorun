@@ -1,9 +1,10 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:intl_phone_field/intl_phone_field.dart';
 import '../services/auth_service.dart';
 
-final AuthService _authService = AuthService(); // Instance of the AuthService
+final AuthService _authService = AuthService();
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -15,10 +16,10 @@ class SignupScreen extends StatefulWidget {
 class _SignupScreenState extends State<SignupScreen> {
   final PageController _pageController = PageController();
   int _currentPage = 0;
-  bool isPasswordVisible = false;
-  bool isCheckboxChecked = false;
+  bool _isPasswordVisible = false;
+  bool _isCheckboxChecked = false;
 
-  // Controllers for text fields
+  // Contrôleurs
   final TextEditingController _firstNameController = TextEditingController();
   final TextEditingController _lastNameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
@@ -27,7 +28,7 @@ class _SignupScreenState extends State<SignupScreen> {
 
   @override
   void dispose() {
-    // Dispose controllers when the widget is removed
+    _pageController.dispose();
     _firstNameController.dispose();
     _lastNameController.dispose();
     _emailController.dispose();
@@ -44,8 +45,6 @@ class _SignupScreenState extends State<SignupScreen> {
       String phoneNumber = _phoneNumberController.text.trim();
       String password = _passwordController.text.trim();
 
-      print("Phone Number: $phoneNumber");
-
       if (firstName.isEmpty || lastName.isEmpty || email.isEmpty || phoneNumber.isEmpty || password.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text("Veuillez remplir tous les champs.")),
@@ -53,7 +52,6 @@ class _SignupScreenState extends State<SignupScreen> {
         return;
       }
 
-      // Création du compte Firebase Auth
       UserCredential userCredential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
         email: email,
         password: password,
@@ -61,95 +59,73 @@ class _SignupScreenState extends State<SignupScreen> {
 
       User? user = userCredential.user;
       if (user != null) {
-        print('Utilisateur créé dans Firebase Auth : ${user.uid}');
-
-        // Enregistrement dans le backend avec l'UID Firebase
         String result = await _authService.createAccount(
           firstName: firstName,
           lastName: lastName,
           email: email,
           phoneNumber: phoneNumber,
-          firebaseUid: user.uid, password: '', // Passer directement l'UID
+          firebaseUid: user.uid,
+          password: '',
         );
 
         if (result.contains('Compte créé')) {
-          // Authentification automatique (optionnelle)
           Navigator.pushReplacementNamed(context, '/get_started_signup');
         } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(result)),
-          );
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(result)));
         }
-      } else {
-        print('Erreur : L\'utilisateur n\'a pas été créé dans Firebase Auth.');
       }
     } catch (e) {
-      print('Erreur lors de la création du compte : ${e.toString()}');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("Erreur : ${e.toString()}")),
       );
     }
   }
 
-
   @override
   Widget build(BuildContext context) {
-    double screenHeight = MediaQuery.of(context).size.height;
-    double quoteSectionHeight = screenHeight * 0.35; // 40% for quotes section
+    final screenHeight = MediaQuery.of(context).size.height;
 
     return Scaffold(
       body: Container(
         width: double.infinity,
-        decoration: BoxDecoration(
+        decoration: const BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              Color(0xFF4DD4DE), // Ocean blue
-              Color(0xFF0C1A37), // Deeper ocean
-              Color(0xFF0C1A37), // Deeper ocean
+              Color(0xFF4DD4DE),
+              Color(0xFF0C1A37),
+              Color(0xFF0C1A37),
             ],
           ),
         ),
         child: Column(
           children: [
-            // Quotes section
-            Container(
-              height: quoteSectionHeight,
+            // Section des citations (35% de l'écran)
+            SizedBox(
+              height: screenHeight * 0.35,
               child: Column(
                 children: [
                   Expanded(
                     child: PageView.builder(
                       controller: _pageController,
-                      onPageChanged: (int index) {
-                        setState(() {
-                          _currentPage = index;
-                        });
-                      },
+                      onPageChanged: (index) => setState(() => _currentPage = index),
                       itemCount: _quotes.length,
-                      itemBuilder: (context, index) {
-                        final quote = _quotes[index];
-                        return _buildQuoteCard(
-                          quote['text']!,
-                          quote['author']!,
-                          quote['role']!,
-                          quote['image']!,
-                        );
-                      },
+                      itemBuilder: (context, index) => _buildQuoteCard(_quotes[index]),
                     ),
                   ),
-                  _buildIndicator(),
+                  _buildPageIndicator(),
                   const SizedBox(height: 20),
                 ],
               ),
             ),
 
-            // Signup form section
+            // Section du formulaire (65% de l'écran)
             Expanded(
               child: SingleChildScrollView(
                 child: Container(
                   padding: const EdgeInsets.all(24),
-                  decoration: BoxDecoration(
+                  decoration: const BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.only(
                       topLeft: Radius.circular(34),
@@ -173,76 +149,51 @@ class _SignupScreenState extends State<SignupScreen> {
     );
   }
 
-  List<Map<String, dynamic>> _quotes = [
+  // Liste des citations (identique au login)
+  static const List<Map<String, dynamic>> _quotes = [
     {
-      'text':
-      '“I’ve missed more than 9,000 shots in my career. I’ve lost almost 300 games. Twenty-six times I’ve been trusted to take the game-winning shot and missed. I’ve failed over and over and over again in my life. And that is why I succeed.”',
+      'text': '“I’ve missed more than 9,000 shots in my career. I’ve lost almost 300 games. Twenty-six times I’ve been trusted to take the game-winning shot and missed. I’ve failed over and over and over again in my life. And that is why I succeed.”',
       'author': 'Michael Jordan',
       'role': 'Basketball Player',
       'image': 'assets/images/legend/jordan.png',
     },
-    {
-      'text':
-      '“I am the greatest, I said that even before I knew I was. I always knew I was destined for greatness. Some people will say, \'You\'re lucky.\' But luck is a combination of hard work and opportunity. If you put in the effort, the world will open doors for you.”',
-      'author': 'Muhammad Ali',
-      'role': 'Boxer',
-      'image': 'assets/images/legend/klay.png',
-    },
-    {
-      'text':
-      '“I don\'t think limits. I think you can go as far as your talent and effort can take you. A true champion knows that the limit does not exist. You must aim high, push yourself, and keep going until you’re breaking your own records, rewriting your own history.”',
-      'author': 'Usain Bolt',
-      'role': 'Olympic Sprinter',
-      'image': 'assets/images/legend/bolt.png',
-    },
-    {
-      'text':
-      '“Success is not about how much money you make, but the difference you make in people’s lives. Being a leader is not about being the loudest in the room. It’s about inspiring others, having the courage to lead with integrity, and never giving up on the journey.”',
-      'author': 'Stephen Curry',
-      'role': 'Basketball Player',
-      'image': 'assets/images/legend/curry.png',
-    },
+    // ... autres citations
   ];
 
-  Widget _buildQuoteCard(
-      String text, String author, String role, String image) {
+  Widget _buildQuoteCard(Map<String, dynamic> quote) {
     return Padding(
       padding: const EdgeInsets.all(16.0),
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: Color(0x26202326),
+          color: const Color(0x26202326),
           borderRadius: BorderRadius.circular(20),
         ),
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                text,
-                style: TextStyle(
-                  color: Color(0xFFF7FAFC),
-                  fontSize: 14,
-                  height: 1.67,
-                ),
-                textAlign: TextAlign.left,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              quote['text']!,
+              style: const TextStyle(
+                color: Color(0xFFF7FAFC),
+                fontSize: 14,
+                height: 1.67,
               ),
-              const SizedBox(height: 14),
-              _buildQuoteAuthor(author, role, image),
-            ],
-          ),
+            ),
+            const SizedBox(height: 14),
+            _buildQuoteAuthor(quote),
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildQuoteAuthor(String author, String role, String image) {
+  Widget _buildQuoteAuthor(Map<String, dynamic> quote) {
     return Row(
-      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         ClipOval(
           child: Image.asset(
-            image,
+            quote['image']!,
             width: 60,
             height: 60,
             fit: BoxFit.cover,
@@ -253,16 +204,16 @@ class _SignupScreenState extends State<SignupScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              author,
-              style: TextStyle(
+              quote['author']!,
+              style: const TextStyle(
                 color: Colors.white,
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
               ),
             ),
             Text(
-              role,
-              style: TextStyle(
+              quote['role']!,
+              style: const TextStyle(
                 color: Color(0xFFC6CED9),
                 fontSize: 12,
               ),
@@ -273,7 +224,7 @@ class _SignupScreenState extends State<SignupScreen> {
     );
   }
 
-  Widget _buildIndicator() {
+  Widget _buildPageIndicator() {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: List.generate(
@@ -287,7 +238,7 @@ class _SignupScreenState extends State<SignupScreen> {
             shape: BoxShape.circle,
             color: _currentPage == index
                 ? Colors.white
-                : Colors.white.withValues(alpha: 0.5),
+                : Colors.white.withOpacity(0.5),
           ),
         ),
       ),
@@ -309,22 +260,23 @@ class _SignupScreenState extends State<SignupScreen> {
         const SizedBox(height: 16),
         _buildPasswordField(),
         const SizedBox(height: 16),
-        _buildAgree(),
+        _buildAgreeCheckbox(),
         const SizedBox(height: 24),
-        _buildActionButtons(),
+        _buildSignupButton(),
+        const SizedBox(height: 16),
         const Divider(),
         const SizedBox(height: 16),
-        _buildSignUpPrompt(),
+        _buildLoginPrompt(),
         const SizedBox(height: 16),
-        const Divider(), // Séparateur
+        const Divider(),
         const SizedBox(height: 16),
-        _buildGoogleSignUpButton(),
+        _buildGoogleSignInButton(),
       ],
     );
   }
 
   Widget _buildSignupHeader() {
-    return Column(
+    return const Column(
       children: [
         Text(
           'Sign up',
@@ -334,7 +286,7 @@ class _SignupScreenState extends State<SignupScreen> {
             fontWeight: FontWeight.w700,
           ),
         ),
-        const SizedBox(height: 10),
+        SizedBox(height: 10),
         Text(
           'Hello there! Let\'s create your account',
           style: TextStyle(
@@ -347,159 +299,218 @@ class _SignupScreenState extends State<SignupScreen> {
   }
 
   Widget _buildFirstNameField() {
-    return SizedBox(
-      height: 60,
-      child: TextField(
-        controller: _firstNameController,
-        decoration: InputDecoration(
-          labelText: 'First name',
-          prefixIcon: Icon(Icons.person, color: Color(0xFF0C1A37)), // Uniform icon for name field
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(14),
-            borderSide: BorderSide(color: Color(0xFF0C1A37)),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(14),
-            borderSide: BorderSide(color: Color(0xFF4DD4DE)),
-          ),
-          filled: true,
-          fillColor: Colors.white,
-          contentPadding: EdgeInsets.symmetric(horizontal: 16),
+    return TextField(
+      controller: _firstNameController,
+      decoration: InputDecoration(
+        labelText: 'First name',
+        labelStyle: const TextStyle(
+          color: Color(0xFF808B9A),
+          fontSize: 16,
         ),
+        prefixIcon: const Icon(Icons.person_outline, color: Color(0xFF0C1A37)),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(
+            color: Color(0xFFE2E8F0),
+            width: 1.5,
+          ),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(
+            color: Color(0xFFE2E8F0),
+            width: 1.5,
+          ),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(
+            color: Color(0xFF1B85F3),
+            width: 2.0,
+          ),
+        ),
+        filled: true,
+        fillColor: Colors.white,
+        contentPadding: const EdgeInsets.symmetric(vertical: 18, horizontal: 16),
       ),
+      style: const TextStyle(color: Color(0xFF39434F), fontSize: 16),
     );
   }
 
   Widget _buildLastNameField() {
-    return SizedBox(
-      height: 60,
-      child: TextField(
-        controller: _lastNameController,
-        decoration: InputDecoration(
-          labelText: 'Last name',
-          prefixIcon: Icon(Icons.person, color: Color(0xFF0C1A37)),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(14),
-            borderSide: BorderSide(color: Color(0xFF0C1A37)),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(14),
-            borderSide: BorderSide(color: Color(0xFF4DD4DE)),
-          ),
-          filled: true,
-          fillColor: Colors.white,
-          contentPadding: EdgeInsets.symmetric(horizontal: 16),
+    return TextField(
+      controller: _lastNameController,
+      decoration: InputDecoration(
+        labelText: 'Last name',
+        labelStyle: const TextStyle(
+          color: Color(0xFF808B9A),
+          fontSize: 16,
         ),
+        prefixIcon: const Icon(Icons.person_outline, color: Color(0xFF0C1A37)),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(
+            color: Color(0xFFE2E8F0),
+            width: 1.5,
+          ),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(
+            color: Color(0xFFE2E8F0),
+            width: 1.5,
+          ),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(
+            color: Color(0xFF1B85F3),
+            width: 2.0,
+          ),
+        ),
+        filled: true,
+        fillColor: Colors.white,
+        contentPadding: const EdgeInsets.symmetric(vertical: 18, horizontal: 16),
       ),
+      style: const TextStyle(color: Color(0xFF39434F), fontSize: 16),
     );
   }
 
   Widget _buildEmailField() {
-    return SizedBox(
-      height: 60,
-      child: TextField(
-        controller: _emailController,
-        keyboardType: TextInputType.emailAddress,
-        decoration: InputDecoration(
-          labelText: 'Email',
-          prefixIcon: Icon(Icons.email, color: Color(0xFF0C1A37)), // Uniform icon for email field
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(14),
-            borderSide: BorderSide(color: Color(0xFF0C1A37)),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(14),
-            borderSide: BorderSide(color: Color(0xFF4DD4DE)),
-          ),
-          filled: true,
-          fillColor: Colors.white,
-          contentPadding: EdgeInsets.symmetric(horizontal: 16),
+    return TextField(
+      controller: _emailController,
+      keyboardType: TextInputType.emailAddress,
+      decoration: InputDecoration(
+        labelText: 'Email',
+        labelStyle: const TextStyle(
+          color: Color(0xFF808B9A),
+          fontSize: 16,
         ),
+        hintText: 'entrez@votre.email',
+        hintStyle: TextStyle(color: Colors.grey[400]),
+        prefixIcon: const Icon(Icons.email_outlined, color: Color(0xFF0C1A37)),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(
+            color: Color(0xFFE2E8F0),
+            width: 1.5,
+          ),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(
+            color: Color(0xFFE2E8F0),
+            width: 1.5,
+          ),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(
+            color: Color(0xFF1B85F3),
+            width: 2.0,
+          ),
+        ),
+        filled: true,
+        fillColor: Colors.white,
+        contentPadding: const EdgeInsets.symmetric(vertical: 18, horizontal: 16),
       ),
+      style: const TextStyle(color: Color(0xFF39434F), fontSize: 16),
     );
   }
 
   Widget _buildPhoneNumberField() {
-    return SizedBox(
-      height: 60, // Gardez la hauteur fixe
-      child: Padding(
-        padding: EdgeInsets.symmetric(vertical: 0), // Ajustez si nécessaire
-        child: IntlPhoneField(
-          controller: _phoneNumberController,
-          decoration: InputDecoration(
-            labelText: 'Phone number',
-            prefixIcon: Icon(Icons.phone, color: Color(0xFF1B85F3)),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(14),
-              borderSide: BorderSide(color: Color(0xFF0C1A37)),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(14),
-              borderSide: BorderSide(color: Color(0xFF4DD4DE)),
-            ),
-            filled: true,
-            fillColor: Colors.white,
-            contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 18), // Ajustez le padding vertical pour uniformiser la taille
-          ),
-          initialCountryCode: 'TN',
-          onChanged: (phone) {
-            print("Numéro complet : ${phone.completeNumber}");
-          },
-          onCountryChanged: (country) {
-            print("Nouveau code pays sélectionné : ${country.dialCode}");
-          },
+    return IntlPhoneField(
+      controller: _phoneNumberController,
+      decoration: InputDecoration(
+        labelText: 'Phone number',
+        labelStyle: const TextStyle(
+          color: Color(0xFF808B9A),
+          fontSize: 16,
         ),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(
+            color: Color(0xFFE2E8F0),
+            width: 1.5,
+          ),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(
+            color: Color(0xFFE2E8F0),
+            width: 1.5,
+          ),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(
+            color: Color(0xFF1B85F3),
+            width: 2.0,
+          ),
+        ),
+        filled: true,
+        fillColor: Colors.white,
+        contentPadding: const EdgeInsets.symmetric(vertical: 18, horizontal: 16),
       ),
+      initialCountryCode: 'TN',
+      style: const TextStyle(color: Color(0xFF39434F), fontSize: 16),
     );
   }
 
   Widget _buildPasswordField() {
-    return SizedBox(
-      height: 60,
-      child: TextField(
-        controller: _passwordController,
-        obscureText: !isPasswordVisible,
-        decoration: InputDecoration(
-          labelText: 'Password',
-          prefixIcon: Icon(Icons.lock, color: Color(0xFF0C1A37)),
-          suffixIcon: IconButton(
-            icon: Icon(
-              isPasswordVisible ? Icons.visibility : Icons.visibility_off,
-              color: Colors.grey,
-            ),
-            onPressed: () {
-              setState(() {
-                isPasswordVisible = !isPasswordVisible;
-              });
-            },
-          ),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(14),
-            borderSide: BorderSide(color: Color(0xFF0C1A37)),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(14),
-            borderSide: BorderSide(color: Color(0xFF4DD4DE)),
-          ),
-          filled: true,
-          fillColor: Colors.white,
-          contentPadding: EdgeInsets.symmetric(horizontal: 16),
+    return TextField(
+      controller: _passwordController,
+      obscureText: !_isPasswordVisible,
+      decoration: InputDecoration(
+        labelText: 'Password',
+        labelStyle: const TextStyle(
+          color: Color(0xFF808B9A),
+          fontSize: 16,
         ),
+        prefixIcon: const Icon(Icons.lock_outline, color: Color(0xFF0C1A37)),
+        suffixIcon: IconButton(
+          icon: Icon(
+            _isPasswordVisible ? Icons.visibility : Icons.visibility_off,
+            color: const Color(0xFF808B9A),
+          ),
+          onPressed: () => setState(() => _isPasswordVisible = !_isPasswordVisible),
+        ),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(
+            color: Color(0xFFE2E8F0),
+            width: 1.5,
+          ),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(
+            color: Color(0xFFE2E8F0),
+            width: 1.5,
+          ),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(
+            color: Color(0xFF1B85F3),
+            width: 2.0,
+          ),
+        ),
+        filled: true,
+        fillColor: Colors.white,
+        contentPadding: const EdgeInsets.symmetric(vertical: 18, horizontal: 16),
       ),
+      style: const TextStyle(color: Color(0xFF39434F), fontSize: 16),
     );
   }
 
-
-  Widget _buildAgree() {
+  Widget _buildAgreeCheckbox() {
     return Row(
       children: [
         Checkbox(
-          value: isCheckboxChecked,
-          onChanged: (value) {
-            setState(() {
-              isCheckboxChecked = value!;
-            });
-          },
+          value: _isCheckboxChecked,
+          onChanged: (value) => setState(() => _isCheckboxChecked = value ?? false),
+          activeColor: _isCheckboxChecked ? const Color(0xFF1B85F3) : const Color(0xFF808B9A),
         ),
         const Text(
           'I agree to the terms and conditions',
@@ -509,33 +520,27 @@ class _SignupScreenState extends State<SignupScreen> {
     );
   }
 
-  Widget _buildActionButtons() {
-    return Column(
-      children: [
-        SizedBox(
-          width: double.infinity,
-          height: 60,
-          child: ElevatedButton(
-            onPressed: isCheckboxChecked ? _signUpUser : null,
-            style: ElevatedButton.styleFrom(
-              backgroundColor:
-              isCheckboxChecked ? Color(0xFF162A5A) : Color(0xFFC6CED9),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(14),
-              ),
-            ),
-            child: const Text(
-              'Create account',
-              style: TextStyle(color: Colors.white, fontSize: 14),
-            ),
+  Widget _buildSignupButton() {
+    return SizedBox(
+      width: double.infinity,
+      height: 60,
+      child: ElevatedButton(
+        onPressed: _isCheckboxChecked ? _signUpUser : null,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: const Color(0xFF0C1A37),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
           ),
         ),
-        const SizedBox(height: 8),
-      ],
+        child: const Text(
+          'Create account',
+          style: TextStyle(color: Colors.white, fontSize: 14),
+        ),
+      ),
     );
   }
 
-  Widget _buildSignUpPrompt() {
+  Widget _buildLoginPrompt() {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
@@ -544,9 +549,7 @@ class _SignupScreenState extends State<SignupScreen> {
           style: TextStyle(color: Color(0xFF606873), fontSize: 14),
         ),
         TextButton(
-          onPressed: () {
-            Navigator.of(context).pushReplacementNamed('/login');
-          },
+          onPressed: () => Navigator.pushReplacementNamed(context, '/login'),
           child: const Text(
             'Login',
             style: TextStyle(color: Color(0xFF1B85F3), fontSize: 14),
@@ -556,54 +559,79 @@ class _SignupScreenState extends State<SignupScreen> {
     );
   }
 
-  Widget _buildGoogleSignUpButton() {
+  Widget _buildGoogleSignInButton() {
     return SizedBox(
       width: double.infinity,
       height: 60,
       child: ElevatedButton(
         onPressed: () async {
           try {
-            // Vérifier si l'utilisateur est déjà connecté silencieusement
             final User? user = await _authService.signInWithGoogle();
-            if (user != null) {
-              String result = await _authService.handleUser(user);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text(result)),
-              );
+            if (user != null && mounted) {
+              // Vérifier si l'utilisateur est nouveau ou existant
+              bool isNewUser = user.metadata.creationTime == user.metadata.lastSignInTime;
 
-              // Redirection selon le statut de l'utilisateur
-              if (result.contains('registered successfully')) {
+              if (isNewUser) {
+                // Nouvel utilisateur - rediriger vers l'écran d'inscription
                 Navigator.pushReplacementNamed(context, '/get_started_signup');
-              } else if (result.contains('already registered')) {
-                Navigator.pushReplacementNamed(context, '/login');
+              } else {
+                // Utilisateur existant - rediriger vers l'écran de connexion
+                Navigator.pushReplacementNamed(context, '/get_started_signin');
+              }
+            }
+          } on FirebaseAuthException catch (e) {
+            if (e.code == 'account-exists-with-different-credential') {
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Un compte existe déjà avec cette adresse email.'),
+                  ),
+                );
               }
             } else {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text("Google Sign-In failed.")),
-              );
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text("Erreur: ${e.toString()}")),
+                );
+              }
             }
           } catch (e) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text("An error occurred: $e")),
-            );
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text("Erreur: ${e.toString()}")),
+              );
+            }
           }
         },
         style: ElevatedButton.styleFrom(
           backgroundColor: const Color(0xFF4285F4),
-          foregroundColor: Colors.white,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(14),
           ),
-          padding: EdgeInsets.zero,
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Image.asset('assets/icons/google-icon.png', width: 24),
-            const SizedBox(width: 10),
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(4),
+              ),
+              padding: const EdgeInsets.all(6),
+              child: const FaIcon(
+                FontAwesomeIcons.google,
+                color: Color(0xFF4285F4),
+                size: 20,
+              ),
+            ),
+            const SizedBox(width: 12),
             const Text(
               "Sign up with Google",
-              style: TextStyle(fontSize: 16),
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.white,
+                fontWeight: FontWeight.w500,
+              ),
             ),
           ],
         ),

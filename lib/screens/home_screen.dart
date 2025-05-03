@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math';
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -20,7 +21,8 @@ import 'package:frontend_gorun/screens/yoga_screen.dart';
 import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
 import 'package:timezone/data/latest.dart' as tz;
-import '../services/Spotify_Service.dart';
+import 'package:url_launcher/url_launcher.dart';
+
 import '/providers/notification_provider.dart';
 import 'Community_Challenge_Screen.dart';
 import 'Goals_Screen.dart';
@@ -126,63 +128,6 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  final List<Map<String, dynamic>> benefits = [
-    {
-      'name': 'Running',
-      'description':
-      'Améliorez votre endurance et votre santé cardiovasculaire.',
-      'icon': Icons.directions_run_rounded
-    },
-    {
-      'name': 'Cycling',
-      'description':
-      'Renforcez vos muscles des jambes et améliorez votre endurance.',
-      'icon': Icons.directions_bike_rounded
-    },
-    {
-      'name': 'Yoga',
-      'description': 'Améliorez votre flexibilité, équilibre et santé mentale.',
-      'icon': Icons.self_improvement_rounded
-    },
-    {
-      'name': 'Swimming',
-      'description':
-      'Entraînement complet du corps avec un faible impact sur les articulations.',
-      'icon': Icons.pool
-    },
-    {
-      'name': 'Football',
-      'description': 'Améliorez votre coordination et esprit d\'équipe.',
-      'icon': Icons.sports_soccer
-    },
-    {
-      'name': 'Tennis',
-      'description': 'Boostez vos réflexes et coordination main-œil.',
-      'icon': Icons.sports_tennis
-    },
-    {
-      'name': 'Basketball',
-      'description': 'Améliorez votre agilité et endurance cardiovasculaire.',
-      'icon': Icons.sports_basketball
-    },
-    {
-      'name': 'Volleyball',
-      'description':
-      'Renforcez le travail d\'équipe et les muscles du haut du corps.',
-      'icon': Icons.sports_volleyball
-    },
-    {
-      'name': 'Weight Training',
-      'description': 'Augmentez la force musculaire et la densité osseuse.',
-      'icon': Icons.fitness_center
-    },
-    {
-      'name': 'Hiking',
-      'description': 'Explorez la nature tout en améliorant votre endurance.',
-      'icon': Icons.terrain
-    },
-  ];
-
   final List<Map<String, dynamic>> additionalHabits = [
     {
       'name': 'Radio',
@@ -251,6 +196,7 @@ class _HomeScreenState extends State<HomeScreen> {
   FlutterLocalNotificationsPlugin();
 
   List<Map<String, dynamic>> userChallenges = []; // Défis de l'utilisateur
+  List<dynamic> benefits = []; // Liste des bénéfices
 
   @override
   void initState() {
@@ -265,6 +211,7 @@ class _HomeScreenState extends State<HomeScreen> {
       // Appelle fetchNotification après l'initialisation
       Provider.of<NotificationProvider>(context, listen: false).fetchNotification();
     });
+    _fetchBenefits();
   }
 
   @override
@@ -299,6 +246,24 @@ class _HomeScreenState extends State<HomeScreen> {
     'dancing': FontAwesomeIcons.personDressBurst,
     // Ajoute d'autres icônes ici selon le besoin
   };
+
+// Méthode pour récupérer les données depuis le backend
+  Future<void> _fetchBenefits() async {
+    try {
+      final response =
+          await http.get(Uri.parse('http://localhost:3000/api/benefits'));
+      if (response.statusCode == 200) {
+        // Si la requête est réussie, on décode les données JSON
+        setState(() {
+          benefits = json.decode(response.body);
+        });
+      } else {
+        print('Erreur lors de la récupération des données');
+      }
+    } catch (e) {
+      print('Erreur de connexion : $e');
+    }
+  }
 
   // Récupérer les défis de l'utilisateur
   Future<void> fetchUserChallenges() async {
@@ -383,115 +348,311 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       ),
       floatingActionButton: FloatingActionButton(
-        heroTag: 'uniqueTagForFAB',
-        onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => MusicScreen()),
-          );
+        heroTag: 'spotifyFAB',
+        onPressed: () async {
+          const spotifyUrl = 'https://open.spotify.com';
+          const spotifyAppUrl = 'spotify://'; // Pour ouvrir l'app mobile
+
+          try {
+            // Essaye d'ouvrir l'application mobile d'abord
+            if (await canLaunchUrl(Uri.parse(spotifyAppUrl))) {
+              await launchUrl(Uri.parse(spotifyAppUrl));
+            }
+            // Fallback sur le site web
+            else if (await canLaunchUrl(Uri.parse(spotifyUrl))) {
+              await launchUrl(
+                Uri.parse(spotifyUrl),
+                mode: LaunchMode.externalApplication,
+              );
+            } else {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text("Install Spotify to open")),
+              );
+            }
+          } catch (e) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text("Error: ${e.toString()}")),
+            );
+          }
         },
-        child: const Icon(Icons.music_note, color: Colors.white),
-        backgroundColor: const Color(0xFF0C1A37),
+        child: const FaIcon(FontAwesomeIcons.spotify, color: Colors.white),
+        backgroundColor: const Color(0xFF1DB954),
+        // Vert Spotify officiel
+        tooltip: 'Ouvrir Spotify', // Texte d'aide au survol
       ),
     );
+  }
+
+  // Liste de citations motivantes
+  final List<String> motivationalQuotes = [
+    "Discipline is the bridge between goals and accomplishment.",
+    "Your only limit is yourself.",
+    "The pain of today will be the strength of tomorrow.",
+    "Success begins with action.",
+    "The more you sweat in training, the less you bleed in combat.",
+    "Perseverance turns failure into achievement.",
+    "Hard work beats talent when talent doesn't work hard.",
+    "Success is the sum of small efforts, repeated day in and day out.",
+    "Don’t stop when you’re tired, stop when you’re done.",
+    "Believe you can and you're halfway there.",
+    "Success doesn't come from what you do occasionally, it comes from what you do consistently.",
+    "The only way to achieve the impossible is to believe it is possible.",
+    "Push yourself because no one else is going to do it for you.",
+    "Success is not for the chosen few, it's for those who choose to succeed.",
+    "The harder you work for something, the greater you’ll feel when you achieve it.",
+    "Success is what comes after you stop making excuses.",
+    "Don’t wait for opportunity. Create it.",
+    "You don’t have to be great to start, but you have to start to be great.",
+    "Failure is not the opposite of success, it's part of success.",
+    "A journey of a thousand miles begins with a single step."
+  ];
+
+  String getRandomQuote() {
+    final random = Random();
+    return motivationalQuotes[random.nextInt(motivationalQuotes.length)];
   }
 
   // Top section with gradient menu icon
   Widget _buildTopSection() {
     return Container(
       padding: AppConstants.kDefaultPadding,
-      color: Colors.white,  // Arrière-plan blanc
+      color: Colors.white,
       child: Row(
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
           PopupMenuButton<String>(
             onSelected: (value) {
               if (value == 'logout') {
-                _handleSignOut(context); // Appeler la fonction de déconnexion
+                _handleSignOut(context);
               }
             },
             icon: ShaderMask(
               shaderCallback: (Rect bounds) {
-                return AppConstants.kPrimaryGradient.createShader(bounds);  // Dégradé pour l'icône
+                return AppConstants.kPrimaryGradient.createShader(bounds);
               },
-              child: Icon(Icons.menu, size: 35, color: Colors.white),  // Icône du menu
+              child: Icon(Icons.menu, size: 35, color: Colors.white),
             ),
-            color: Colors.white, // Arrière-plan blanc du menu
-            itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
-              PopupMenuItem<String>(
-                value: 'profile',
-                child: ListTile(
-                  leading: Icon(Icons.person),
-                  title: Text('User Profile'),
-                ),
-              ),
-              PopupMenuItem<String>(
-                value: 'settings',
-                child: ListTile(
-                  leading: Icon(Icons.settings),
-                  title: Text('Settings'),
-                ),
-              ),
-              PopupMenuItem<String>(
-                value: 'workout_history',
-                child: ListTile(
-                  leading: Icon(Icons.history),
-                  title: Text('Workout History'),
-                ),
-              ),
-              PopupMenuItem<String>(
-                value: 'challenges',
-                child: ListTile(
-                  leading: Icon(Icons.group),
-                  title: Text('Challenges'),
-                ),
-              ),
-              PopupMenuItem<String>(
-                value: 'music',
-                child: ListTile(
-                  leading: Icon(Icons.music_note),
-                  title: Text('My Playlist'),
-                ),
-              ),
-              PopupMenuItem<String>(
-                value: 'connect_apps',
-                child: ListTile(
-                  leading: Icon(Icons.link),
-                  title: Text('Connect with other apps'),
-                ),
-              ),
-              PopupMenuItem<String>(
-                value: 'support',
-                child: ListTile(
-                  leading: Icon(Icons.help),
-                  title: Text('Support / Help'),
-                ),
-              ),
-              PopupMenuItem<String>(
-                value: 'about',
-                child: ListTile(
-                  leading: Icon(Icons.info),
-                  title: Text('About the app'),
-                ),
-              ),
-              PopupMenuItem<String>(
-                value: 'logout',
-                child: ListTile(
-                  leading: Icon(Icons.power_settings_new_sharp, color: Colors.red),
-                  title: Text(
-                    'Logout',
-                    style: TextStyle(color: Colors.red),
+            color: Colors.white,
+            elevation: 16,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(14),
+              side: BorderSide(color: Colors.grey.shade100, width: 1),
+            ),
+            itemBuilder: (BuildContext context) {
+              final currentQuote = getRandomQuote();
+
+              return <PopupMenuEntry<String>>[
+                // 🎯 Improved Motivation Quote
+                PopupMenuItem<String>(
+                  enabled: false,
+                  child: Container(
+                    padding: EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade50,
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(Icons.auto_awesome,
+                                size: 16, color: Colors.amber),
+                            SizedBox(width: 6),
+                            Text(
+                              "Motivation of the Day",
+                              style: TextStyle(
+                                color: Colors.grey.shade700,
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                        SizedBox(height: 8),
+                        Text(
+                          currentQuote,
+                          style: TextStyle(
+                            color: Colors.black,
+                            fontSize: 13,
+                            height: 1.3,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-              ),
-            ],
+                PopupMenuDivider(height: 8),
+
+                // 👤 Profile
+                _buildMenuItem(
+                  icon: Icons.person_outline_rounded,
+                  title: "My Profile",
+                  subtitle: "Your statistics",
+                  color: Colors.blue.shade600,
+                  navigatorDestination: '/profilo', // Navigation added
+                ),
+
+                // ⚡ Trainings
+                _buildMenuItem(
+                  icon: Icons.bolt_rounded,
+                  title: "Trainings",
+                  subtitle: "Personalized programs",
+                  color: Colors.orange.shade600,
+                  hasNotification: true,
+                  navigatorDestination: '/trainings', // Navigation added
+                ),
+
+                // 📅 History
+                _buildMenuItem(
+                  icon: Icons.history_rounded,
+                  title: "History",
+                  subtitle: "Your past sessions",
+                  color: Colors.purple.shade600,
+                  navigatorDestination: '/history', // Navigation added
+                ),
+
+                // 🏆 Challenges
+                _buildMenuItem(
+                  icon: Icons.emoji_events_rounded,
+                  title: "Challenges",
+                  subtitle: "Rankings and rewards",
+                  color: Colors.teal.shade600,
+                  navigatorDestination:
+                      '/community_challenge_screen', // Navigation added
+                ),
+
+                // 🎵 Playlist
+                _buildMenuItem(
+                  icon: Icons.music_note_rounded,
+                  title: "GoRun Playlist",
+                  subtitle: "Boost your sessions",
+                  color: Colors.red.shade600,
+                  navigatorDestination: '/music_screen', // Navigation added
+                ),
+
+                PopupMenuDivider(height: 8),
+
+                // ⚙️ Settings
+                _buildMenuItem(
+                  icon: Icons.settings_rounded,
+                  title: "Settings",
+                  subtitle: "Personalization",
+                  color: Colors.grey.shade600,
+                  navigatorDestination: '/settings', // Navigation added
+                ),
+
+                // ❓ Help
+                _buildMenuItem(
+                  icon: Icons.help_outline_rounded,
+                  title: "Help & Support",
+                  subtitle: "Assistance center",
+                  color: Colors.blueGrey.shade600,
+                  navigatorDestination: '/help_support', // Navigation added
+                ),
+
+                PopupMenuDivider(height: 8),
+
+                // 🚪 Logout
+                PopupMenuItem<String>(
+                  value: 'logout',
+                  height: 72, // Same height as other items if needed
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Container(
+                        width: 36,
+                        height: 36,
+                        decoration: BoxDecoration(
+                          color: Colors.red.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Icon(Icons.exit_to_app_rounded,
+                            color: Colors.red.shade600, size: 20),
+                      ),
+                      SizedBox(width: 12),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            "Logout",
+                            style: TextStyle(
+                              color: Colors.red.shade600,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 14,
+                            ),
+                          ),
+                          Text(
+                            "See you soon!",
+                            style: TextStyle(
+                              color: Colors.red.shade400,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ];
+            },
           ),
         ],
       ),
     );
   }
 
-  // PageView for cards
+  // Constructeur du PopupMenuItem avec les données récupérées
+  PopupMenuItem<String> _buildMenuItem({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required Color color,
+    required String navigatorDestination,
+    bool hasNotification = false,
+  }) {
+    return PopupMenuItem<String>(
+      height: 72,
+      onTap: () {
+        Future.microtask(() {
+          Navigator.pushNamed(context, navigatorDestination);
+        });
+      },
+      child: Row(
+        children: [
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(icon, color: color, size: 20),
+          ),
+          SizedBox(width: 12),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(title,
+                  style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
+                      color: Colors.black)),
+              Text(subtitle,
+                  style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
+            ],
+          ),
+          if (hasNotification) ...[
+            Spacer(),
+            Icon(Icons.circle, color: Colors.red, size: 8),
+          ],
+        ],
+      ),
+    );
+  }
+
+  // PageView pour afficher les cartes de bénéfices
   Widget _buildPageView() {
     return Listener(
       onPointerMove: (details) {
@@ -525,7 +686,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // Benefit card with specific navigation for each sport
+  // Carte de bénéfice pour chaque sport
   Widget _buildBenefitCard(Map<String, dynamic> benefit, int index) {
     final Map<String, Widget Function()> sportScreens = {
       'Running': () => RunningTracker(),
@@ -538,6 +699,33 @@ class _HomeScreenState extends State<HomeScreen> {
       'Volleyball': () => VolleyballTracker(),
       'Weight Training': () => WeightTrainingTracker(),
       'Hiking': () => HikingTracker(),
+    };
+
+    final Map<String, IconData> iconMap = {
+      'directions_run': Icons.directions_run,
+      'directions_run_rounded': Icons.directions_run_rounded,
+      'run_circle': Icons.run_circle,
+
+      'directions_bike': Icons.directions_bike,
+      'directions_bike_rounded': Icons.directions_bike_rounded,
+
+      'self_improvement': Icons.self_improvement,
+      'self_improvement_rounded': Icons.self_improvement_rounded,
+
+      'pool': Icons.pool,
+
+      'sports_soccer': Icons.sports_soccer,
+      'sports_football': Icons.sports_football,
+
+      'sports_tennis': Icons.sports_tennis,
+      'sports_basketball': Icons.sports_basketball,
+      'sports_volleyball': Icons.sports_volleyball,
+
+      'fitness_center': Icons.fitness_center,
+      'terrain': Icons.terrain,
+
+      // fallback
+      'default': Icons.help_outline,
     };
 
     return GestureDetector(
@@ -570,7 +758,8 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(benefit['icon'], size: 100, color: Colors.white),
+            Icon(iconMap[benefit['icon']] ?? Icons.help_outline,
+                size: 100, color: Colors.white),
             const SizedBox(height: 4),
           ],
         ),
@@ -578,7 +767,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // Main title
+  // Titre principal
   Widget _buildMainTitle() {
     return Padding(
       padding: AppConstants.kDefaultPadding,

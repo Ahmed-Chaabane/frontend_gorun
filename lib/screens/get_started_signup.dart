@@ -12,6 +12,9 @@ class GetStartedSignupScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    double scaleFactor = MediaQuery.of(context).size.width / 375;
+    scaleFactor = scaleFactor.clamp(1.0, 1.5);
+
     return WillPopScope(
       onWillPop: () async {
         return false; // Bloque la flèche de retour
@@ -22,40 +25,38 @@ class GetStartedSignupScreen extends StatelessWidget {
           children: [
             Expanded(
               child: Center(
-                child: _buildUserProfile(),
+                child: _buildUserProfile(scaleFactor),
               ),
             ),
-            _buildActionButtons(context),
+            _buildActionButtons(context, scaleFactor),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildUserProfile() {
+  Widget _buildUserProfile(double scaleFactor) {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        // Utilisation de Image.network avec gestion du chargement et des erreurs
         CircleAvatar(
-          radius: 100,
-          backgroundImage: NetworkImage(userImageUrl),
-          // Si l'image échoue à se charger, il ne faut pas retourner une valeur ici
-          onBackgroundImageError: (error, stackTrace) {
-            // Il n'y a rien à retourner ici. L'image de remplacement sera gérée autrement.
-          },
+          radius: 100 * scaleFactor,
+          backgroundColor: Colors.white,
+          child: ClipOval(
+            child: _buildProfileImage(),
+          ),
         ),
-        const SizedBox(height: 16),
+        SizedBox(height: 16 * scaleFactor),
         Text(
           userName,
-          style: const TextStyle(
-            fontSize: 25,
+          style: TextStyle(
+            fontSize: 25 * scaleFactor,
             fontWeight: FontWeight.bold,
           ),
         ),
-        const SizedBox(height: 16),
+        SizedBox(height: 16 * scaleFactor),
         const Text(
-          "Welcome! We\'re excited to have you here.\n Let\'s get started and make great things happen!",
+          "Welcome! We're excited to have you here.\n Let's get started and make great things happen!",
           textAlign: TextAlign.center,
           style: TextStyle(
             color: Color(0xFF808B9A),
@@ -66,9 +67,46 @@ class GetStartedSignupScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildActionButtons(BuildContext context) {
+  Widget _buildProfileImage() {
+    if (userImageUrl.isEmpty) {
+      return Image.asset(
+        'assets/icons/sportsman.png',
+        width: 200,
+        height: 200,
+        fit: BoxFit.cover,
+      );
+    } else {
+      return Image.network(
+        userImageUrl,
+        width: 200,
+        height: 200,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) {
+          return Image.asset(
+            'assets/icons/sportsman.png',
+            width: 200,
+            height: 200,
+            fit: BoxFit.cover,
+          );
+        },
+        loadingBuilder: (context, child, loadingProgress) {
+          if (loadingProgress == null) return child;
+          return Center(
+            child: CircularProgressIndicator(
+              value: loadingProgress.expectedTotalBytes != null
+                  ? loadingProgress.cumulativeBytesLoaded /
+                  loadingProgress.expectedTotalBytes!
+                  : null,
+            ),
+          );
+        },
+      );
+    }
+  }
+
+  Widget _buildActionButtons(BuildContext context, double scaleFactor) {
     return Padding(
-      padding: const EdgeInsets.all(20.0),
+      padding: EdgeInsets.all(20),
       child: SizedBox(
         width: double.infinity,
         height: 60,
@@ -82,11 +120,11 @@ class GetStartedSignupScreen extends StatelessWidget {
               borderRadius: BorderRadius.circular(14),
             ),
           ),
-          child: const Text(
+          child: Text(
             'Get Started',
             style: TextStyle(
               color: Colors.white,
-              fontWeight: FontWeight.bold,
+              fontSize: 16,
             ),
           ),
         ),
