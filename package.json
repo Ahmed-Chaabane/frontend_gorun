@@ -1,0 +1,32 @@
+{
+  "name": "frontend_gorun",
+  "version": "1.0.0",
+  "description": "A new Flutter project.",
+  "main": "index.js",
+  "directories": {
+    "lib": "lib",
+    "test": "test"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Ahmed-Chaabane/frontend_gorun.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Ahmed-Chaabane/frontend_gorun/issues"
+  },
+  "homepage": "https://github.com/Ahmed-Chaabane/frontend_gorun#readme",
+  "dependencies": {
+    "axios": "^1.8.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "open": "^10.1.0",
+    "querystring": "^0.2.1"
+  }
+}
